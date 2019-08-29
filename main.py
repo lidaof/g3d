@@ -9,7 +9,8 @@ significance:
     * structure data are compressed to save space
 '''
 
-import sys, binascii, codecs
+import random
+import pickle
 
 def main():
     files = ['test/chr1.pdb','test/chr2.pdb']
@@ -33,5 +34,37 @@ def main():
                 fout.write(bcontent)
     return 0
 
+def test():
+    uncompressed_dic = {'a': 1, 'b': (2, 3, 4), 'c': 'text'}  # Sample data.
+
+    with open('UCIndex.txt', 'wb') as f:
+        UncompressedLookup = {}
+        offset = 0
+
+        for key, value in uncompressed_dic.items():
+            pkldata = pickle.dumps(value)
+            size = len(pkldata)
+            UncompressedLookup[key] = {'offset': offset, 'size': size}
+            f.write(pkldata)
+            offset += size
+
+
+    # Read items back in random order using UncompressedLookup dict.
+    keys = list(uncompressed_dic.keys())
+    random.shuffle(keys)
+
+    i = 0
+    while keys:
+        if i >= 5:
+            break
+        key = keys.pop()
+        offset = UncompressedLookup[key]['offset']
+        size = UncompressedLookup[key]['size']
+        with open('UCIndex.txt', 'rb') as f:
+            f.seek(offset)
+            pkldata = f.read(size)
+            value = pickle.loads(pkldata)
+        print((key, value))
+
 if __name__ == '__main__':
-    main()
+    test()
