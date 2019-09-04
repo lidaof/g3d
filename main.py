@@ -9,62 +9,81 @@ significance:
     * structure data are compressed to save space
 '''
 
-import random
-import pickle
+import pickle, os
 
-def main():
+# fixed header size 1000 bytes
+HEADER_LENGTH = 1000
+
+def structureFilesToG3dFile():
+    '''convert many text stucture files to g3d format'''
     files = ['test/chr1.pdb','test/chr2.pdb']
-    magic = '8G3D4515'
+    magic = 'G3D'
     genome = 'hg19'
     sample = 'GM12878'
-    resolution = ''
+    # resolution = ''
     version = 1
+    header = bytearray(HEADER_LENGTH)
+    offset = HEADER_LENGTH
     with open('gm.g3d', 'wb') as fout:
-        # fout.write(binascii.hexlify(magic.encode()))
-        # fout.write(binascii.hexlify(genome.encode()))
-        # fout.write(binascii.hexlify(sample.encode()))
+        fout.seek(HEADER_LENGTH)
+        offsets = {}
         for f in files:
             with open(f, 'rU') as fin:
-                content = fin.read()
-                encoded = codecs.encode(content.encode(), 'hex_codec')
-                print(type(encoded))
-                bcontent = bytearray.fromhex(str(encoded))
-                # bcontent = binascii.unhexlify(encoded)
-                # binarray = ' '.join(format(ch, 'b') for ch in bytearray(fin.read()))
-                fout.write(bcontent)
-    return 0
-
-def test():
-    uncompressed_dic = {'a': 1, 'b': (2, 3, 4), 'c': 'text'}  # Sample data.
-
-    with open('UCIndex.txt', 'wb') as f:
-        UncompressedLookup = {}
-        offset = 0
-
-        for key, value in uncompressed_dic.items():
-            pkldata = pickle.dumps(value)
-            size = len(pkldata)
-            UncompressedLookup[key] = {'offset': offset, 'size': size}
-            f.write(pkldata)
-            offset += size
+                pkldata = pickle.dumps(fin.read())
+                size = len(pkldata)
+                fn = os.path.basename(f)
+                offsets[fn] = {'offset': offset, 'size': size}
+                fout.write(pkldata)
+                offset += size
+        meta = {
+            'magic': magic,
+            'version': version,
+            'genome': genome,
+            'sample': sample,
+            'offsets': offsets
+        }
+        fout.seek(0)
+        metapkl = pickle.dumps(meta)
+        metapklLen = len(metapkl)
+        for i in range(0, metapklLen):
+            header[i] = metapkl[i]
+        fout.write(header)
 
 
-    # Read items back in random order using UncompressedLookup dict.
-    keys = list(uncompressed_dic.keys())
-    random.shuffle(keys)
+def readHeader(fh):
+    headerpkl = fh.read(HEADER_LENGTH)
+    return pickle.loads(headerpkl)
 
-    i = 0
-    while keys:
-        if i >= 5:
-            break
-        key = keys.pop()
-        offset = UncompressedLookup[key]['offset']
-        size = UncompressedLookup[key]['size']
-        with open('UCIndex.txt', 'rb') as f:
-            f.seek(offset)
-            pkldata = f.read(size)
-            value = pickle.loads(pkldata)
-        print((key, value))
+def G3dFileToStructureFiles(g3dFileName):
+    '''convert g3d to many text stucture files.'''
+    with open(g3dFileName, 'rb') as fin:
+        header = readHeader(fin)
+        offsets = header['offsets']
+        for fn in offsets:
+            fileName = fn
+            fileOffset = offsets[fn]['offset']
+            fileSize = offsets[fn]['size']
+            fin.seek(fileOffset)
+            filepkl = fin.read(fileSize)
+            with open('testOut/'+fileName, 'w') as fout:
+                fout.write(pickle.loads(filepkl))
+
+def G3dFileQueryStucture(g3dFileName, fn):
+    '''query a stucture from a g3f file.'''
+    with open(g3dFileName, 'rb') as fin:
+        header = readHeader(fin)
+        offsets = header['offsets']
+        if fn not in offsets:
+            print('error: %s not exits in %s', fn, g3dFileName)
+        else:
+            fileName = fn
+            fileOffset = offsets[fn]['offset']
+            fileSize = offsets[fn]['size']
+            fin.seek(fileOffset)
+            filepkl = fin.read(fileSize)
+            print(pickle.loads(filepkl))
 
 if __name__ == '__main__':
-    test()
+    # structureFilesToG3dFile()
+    # G3dFileToStructureFiles('gm.g3d')
+    G3dFileQueryStucture('gm.g3d','chr2.pdb')
