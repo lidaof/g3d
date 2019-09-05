@@ -4,17 +4,22 @@
 main program of g3d
 combine predicted 3d structure files to 1 binary file
 significance:
+    * support any format
     * one file for whole genome make storage easier
     * remote and range access
     * structure data are compressed to save space
 '''
 
-import pickle, os
+import sys
+import os
+import pickle
+import zlib
+import json
 
-# fixed header size 1000 bytes
-HEADER_LENGTH = 1000
+# FIXED header size 64000 bytes
+HEADER_LENGTH = 64000
 
-def structureFilesToG3dFile():
+def structure_files_to_g3d_file():
     '''convert many text stucture files to g3d format'''
     files = ['test/chr1.pdb','test/chr2.pdb']
     magic = 'G3D'
@@ -29,11 +34,12 @@ def structureFilesToG3dFile():
         offsets = {}
         for f in files:
             with open(f, 'rU') as fin:
-                pkldata = pickle.dumps(fin.read())
-                size = len(pkldata)
+                pkldata = pickle.dumps(fin.read(), protocol=3)
+                compressed = zlib.compress(pkldata)
+                size = len(compressed)
                 fn = os.path.basename(f)
                 offsets[fn] = {'offset': offset, 'size': size}
-                fout.write(pkldata)
+                fout.write(compressed)
                 offset += size
         meta = {
             'magic': magic,
@@ -43,47 +49,55 @@ def structureFilesToG3dFile():
             'offsets': offsets
         }
         fout.seek(0)
-        metapkl = pickle.dumps(meta)
-        metapklLen = len(metapkl)
-        for i in range(0, metapklLen):
-            header[i] = metapkl[i]
+        meta_pkl = pickle.dumps(meta, protocol=3)
+        meta_pkl_len = len(meta_pkl)
+        for i in range(0, meta_pkl_len):
+            header[i] = meta_pkl[i]
         fout.write(header)
 
 
-def readHeader(fh):
-    headerpkl = fh.read(HEADER_LENGTH)
-    return pickle.loads(headerpkl)
+def read_header(fh):
+    '''return the header of a g3d file'''
+    header_pkl = fh.read(HEADER_LENGTH)
+    return pickle.loads(header_pkl)
 
-def G3dFileToStructureFiles(g3dFileName):
+def g3d_file_to_structure_files(g3d_filename):
     '''convert g3d to many text stucture files.'''
-    with open(g3dFileName, 'rb') as fin:
-        header = readHeader(fin)
+    with open(g3d_filename, 'rb') as fin:
+        header = read_header(fin)
         offsets = header['offsets']
         for fn in offsets:
-            fileName = fn
-            fileOffset = offsets[fn]['offset']
-            fileSize = offsets[fn]['size']
-            fin.seek(fileOffset)
-            filepkl = fin.read(fileSize)
-            with open('testOut/'+fileName, 'w') as fout:
-                fout.write(pickle.loads(filepkl))
+            file_name = fn
+            file_offset = offsets[fn]['offset']
+            file_size = offsets[fn]['size']
+            fin.seek(file_offset)
+            file_pkl = fin.read(file_size)
+            with open('testOut/'+file_name, 'w') as fout:
+                fout.write(pickle.loads(zlib.decompress(file_pkl)))
 
-def G3dFileQueryStucture(g3dFileName, fn):
+def g3d_file_query_stucture(g3d_filename, fn):
     '''query a stucture from a g3f file.'''
-    with open(g3dFileName, 'rb') as fin:
-        header = readHeader(fin)
+    with open(g3d_filename, 'rb') as fin:
+        header = read_header(fin)
         offsets = header['offsets']
         if fn not in offsets:
-            print('error: %s not exits in %s', fn, g3dFileName)
+            print('error: %s not exits in %s', fn, g3d_filename)
         else:
-            fileName = fn
-            fileOffset = offsets[fn]['offset']
-            fileSize = offsets[fn]['size']
-            fin.seek(fileOffset)
-            filepkl = fin.read(fileSize)
-            print(pickle.loads(filepkl))
+            file_offset = offsets[fn]['offset']
+            file_size = offsets[fn]['size']
+            fin.seek(file_offset)
+            file_pkl = fin.read(file_size)
+            print(pickle.loads(zlib.decompress(file_pkl)))
+
+def get_meta(g3d_filename):
+    '''convert g3d to many text stucture files.'''
+    with open(g3d_filename, 'rb') as fin:
+        header = read_header(fin)
+    json.dump(header, sys.stdout, indent=4)
+    print()
 
 if __name__ == '__main__':
-    # structureFilesToG3dFile()
-    # G3dFileToStructureFiles('gm.g3d')
-    G3dFileQueryStucture('gm.g3d','chr2.pdb')
+    structure_files_to_g3d_file()
+    g3d_file_to_structure_files('gm.g3d')
+    g3d_file_query_stucture('gm.g3d','chr2.pdb')
+    get_meta('gm.g3d')
