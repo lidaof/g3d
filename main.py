@@ -1,35 +1,57 @@
 #!/bin/env/python
-
-'''
-main program of g3d
-combine predicted 3d structure files to 1 binary file
+"""
+Main program of g3dtools.
+* combine predicted 3d structure files to 1 binary file
 significance:
     * support any format
     * one file for whole genome make storage easier
     * remote and range access
     * structure data are compressed to save space
-'''
+"""
 
 import sys
 import os
 import pickle
 import zlib
 import json
+import glob
+import argparse
+
+MAGIC = 'G3D'
+VERSION = 1
 
 # FIXED header size 64000 bytes
 HEADER_LENGTH = 64000
 
-def structure_files_to_g3d_file():
-    '''convert many text stucture files to g3d format'''
-    files = ['test/chr1.pdb','test/chr2.pdb']
-    magic = 'G3D'
-    genome = 'hg19'
-    sample = 'GM12878'
-    # resolution = ''
-    version = 1
+def structure_files_to_g3d_file_wrap(args):
+    structure_files_to_g3d_file(args.directory, args.output, args.format, args.genome, args.sample)
+
+def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genome="unknow_genome", sample="unknow_sample"):
+    """
+    Convert many text stucture files in one directory to a g3d format file.
+    This folder should contain a list of files naming like chr1.pdb, chr2.pdb.. etc.
+
+    :param directory: directory contains the structure files
+    :param output: output g3d file name
+    :param sformat: structure file format
+    :param genome: genome information
+    :param sample: sample information
+    :return: null
+    :raise: ValueError: raises ValueError while cannot find any structure file
+
+    :example:
+
+    python main.py dump test -g hg19 -s GM12878 -o GM12878_chr1_chr2
+
+    TODO: resolution
+    """
+    files = glob.glob('{}/*.{}'.format(directory.strip('/'), sformat))
+    if len(files) == 0:
+        raise ValueError('cannot find any structure file')
+    
     header = bytearray(HEADER_LENGTH)
     offset = HEADER_LENGTH
-    with open('gm.g3d', 'wb') as fout:
+    with open('{}.g3d'.format(output), 'wb') as fout:
         fout.seek(HEADER_LENGTH)
         offsets = {}
         for f in files:
@@ -38,12 +60,13 @@ def structure_files_to_g3d_file():
                 compressed = zlib.compress(pkldata)
                 size = len(compressed)
                 fn = os.path.basename(f)
-                offsets[fn] = {'offset': offset, 'size': size}
+                [chrom, fnformat] = fn.split('.')
+                offsets[chrom] = {'offset': offset, 'size': size, 'chromosome': chrom, 'format': fnformat}
                 fout.write(compressed)
                 offset += size
         meta = {
-            'magic': magic,
-            'version': version,
+            'magic': MAGIC,
+            'version': VERSION,
             'genome': genome,
             'sample': sample,
             'offsets': offsets
@@ -54,7 +77,6 @@ def structure_files_to_g3d_file():
         for i in range(0, meta_pkl_len):
             header[i] = meta_pkl[i]
         fout.write(header)
-
 
 def read_header(fh):
     '''return the header of a g3d file'''
@@ -97,7 +119,20 @@ def get_meta(g3d_filename):
     print()
 
 if __name__ == '__main__':
-    structure_files_to_g3d_file()
-    g3d_file_to_structure_files('gm.g3d')
-    g3d_file_query_stucture('gm.g3d','chr2.pdb')
-    get_meta('gm.g3d')
+    parser = argparse.ArgumentParser(prog='g3dtools', description='g3dtools for operating text structure files with g3d format.')
+    subparsers = parser.add_subparsers(title='subcommands',
+                                        description='valid subcommands',
+                                        help='additional help')
+    parser_dump = subparsers.add_parser('dump', help='dump structure files to g3d file')
+    parser_dump.add_argument('directory', help='directory contains structure files.')
+    parser_dump.add_argument('-g', '--genome', help='genome assembly, like hg19, m10 etc. default: unknow_genome', default='unknow_genome')
+    parser_dump.add_argument('-s', '--sample', help='sample name. default: unknow_sample', default='unknow_sample')
+    parser_dump.add_argument('-f', '--format', help='structure file format. default: pdb', default='pdb')
+    parser_dump.add_argument('-o', '--output', help='output file name. default: output', default='output')
+    parser_dump.set_defaults(func=structure_files_to_g3d_file_wrap)
+    args = parser.parse_args()
+    args_len = len(vars(args))
+    if args_len == 0:
+        parser.print_help()
+    if hasattr(args, 'func'):
+        args.func(args)
