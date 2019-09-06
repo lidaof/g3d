@@ -12,6 +12,7 @@
     "browser-or-node": "^1.2.1",
     "cross-fetch": "^3.0.4",
     "jpickle": "git+https://github.com/jlaine/node-jpickle.git",
-    "util": "^0.12.1"
+    "util": "^0.12.1",
+    "zlib": "^1.0.5"
   }
 }

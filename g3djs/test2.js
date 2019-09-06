@@ -1,12 +1,7 @@
 const fs = require('fs');
 const jpickle = require('jpickle');
 
-fs.open('test.dat', 'r', (err, fd) => {
-    const buffer = Buffer.alloc(100);
-    fs.read(fd, buffer, 0, 100, 0, (err, buf) => {
-        console.log(buf);
-        const data = jpickle.loads(buf)
-        console.log(data)
-    })
-    
-})
+const readStream = fs.createReadStream('../gm.g3d', {start: 0, end: 64000});
+let meta;
+readStream.on('data', data => meta = jpickle.loads(data.toString('binary')));
+console.log(meta);
