@@ -1,7 +1,7 @@
 const zlib = require('zlib');
-const fetch = require('cross-fetch');
 const BrowserLocalFile = require('./io/browserLocalFile');
 const RemoteFile = require('./io/remoteFile');
+const jpickle = require('jpickle');
 
 const HEADER_SIZE = 64000; // header size of 64000
 
@@ -25,7 +25,6 @@ class G3dFile {
     }
 
     async init() {
-
         if (this.initialized) {
             return;
         } else {
@@ -41,19 +40,19 @@ class G3dFile {
 
     async readHeader() {
 
-        const data = await this.file.read(0, HEADER_SIZE);
+        const response = await this.file.read(0, HEADER_SIZE);
 
-        if (!data) {
+        if (!response) {
             return undefined;
         }
 
         const buffer = Buffer.from(response);
         const header = jpickle.loads(buffer.toString('binary'));
-        this.magic = header.magic;
-        this.genome = header.genome;
-        this.version = header.version;
-        this.sample = header.sample;
-        this.offsets = header.offsets;
+        const magic = header.magic;
+        const genome = header.genome;
+        const version = header.version;
+        const sample = header.sample;
+        const offsets = header.offsets;
         
         // Meta data for the g3d file
         this.meta = {

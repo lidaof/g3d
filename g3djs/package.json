@@ -1,9 +1,8 @@
 {
   "name": "g3djs",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Javascript API for reading g3d file",
   "main": "index.js",
-  "files": ["./**"],
   "scripts": {
     "test": "mocha -u tdd"
   },
@@ -14,6 +13,7 @@
     "chai": "^4.2.0",
     "cross-fetch": "^3.0.4",
     "jpickle": "git+https://github.com/jlaine/node-jpickle.git",
+    "mocha": "^6.2.0",
     "util": "^0.12.1",
     "zlib": "^1.0.5"
   },
