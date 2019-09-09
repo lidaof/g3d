@@ -2,6 +2,9 @@ const zlib = require('zlib');
 const BrowserLocalFile = require('./io/browserLocalFile');
 const RemoteFile = require('./io/remoteFile');
 const jpickle = require('jpickle');
+const util = require('util');
+
+const unzip = util.promisify(zlib.unzip);
 
 const HEADER_SIZE = 64000; // header size of 64000
 
@@ -65,24 +68,18 @@ class G3dFile {
     }
 
     async readData(chrom) {
+        await this.init();
         const offset = this.meta.offsets[chrom];
         if(!offset) {
             return null;
         }
-        let data;
-        const response = this.file.read(offset.offset, offset.size);
+        const response = await this.file.read(offset.offset, offset.size);
         if(!response) {
             return null;
         }
         const buffer = Buffer.from(response);
-        zlib.unzip(buffer, (err, buffer) => {
-            if (!err) {
-                data = jpickle.loads(buffer.toString('binary'));
-            } else {
-                // handle error
-            }
-        });
-        return data;
+        const unzipped = await unzip(buffer);
+        return jpickle.loads(unzipped.toString('binary'));
     }
 }
 

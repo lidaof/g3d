@@ -10,4 +10,13 @@ suite('RemoteG3dFile', function () {
         assert.equal(file.meta.magic, 'G3D');
     })
 
+    test('test read data for chr2', async function () {
+        const url = "https://wangftp.wustl.edu/~dli/test/GM12878_chr1_chr2.g3d"
+        const file = new G3dFile({url})
+        await file.readHeader();
+        const data = await file.readData('chr2');
+        assert.ok(data);
+    })
+
+
 })
