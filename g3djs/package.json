@@ -1,18 +1,33 @@
 {
   "name": "g3djs",
   "version": "1.0.0",
-  "description": "",
-  "main": "readLocal.js",
+  "description": "Javascript API for reading g3d file",
+  "main": "index.js",
+  "files": ["./**"],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha -u tdd"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Daofeng Li",
+  "license": "MIT",
   "dependencies": {
     "browser-or-node": "^1.2.1",
+    "chai": "^4.2.0",
     "cross-fetch": "^3.0.4",
     "jpickle": "git+https://github.com/jlaine/node-jpickle.git",
     "util": "^0.12.1",
     "zlib": "^1.0.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lidaof/g3d.git"
+  },
+  "keywords": [
+    "g3d",
+    "3d-structure",
+    "genome"
+  ],
+  "bugs": {
+    "url": "https://github.com/lidaof/g3d/issues"
+  },
+  "homepage": "https://github.com/lidaof/g3d/g3djs#readme"
 }
