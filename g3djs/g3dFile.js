@@ -4,9 +4,11 @@ const RemoteFile = require('./io/remoteFile');
 const jpickle = require('jpickle');
 const util = require('util');
 
+const binning = require('./utils/binning');
+
 const unzip = util.promisify(zlib.unzip);
 
-const HEADER_SIZE = 64000; // header size of 64000
+const HEADER_SIZE = 512000; // header size of 512000
 
 class G3dFile {
     constructor(config) {
@@ -50,10 +52,12 @@ class G3dFile {
         }
 
         const buffer = Buffer.from(response);
-        const header = jpickle.loads(buffer.toString('binary'));
+        const unzipped = await unzip(buffer);
+        const header = jpickle.loads(unzipped.toString('binary'));
         const magic = header.magic;
         const genome = header.genome;
         const version = header.version;
+        const resolutions = header.resolutions;
         const sample = header.sample;
         const offsets = header.offsets;
         
@@ -62,17 +66,26 @@ class G3dFile {
             magic,
             genome,
             version,
+            resolutions,
             sample,
             offsets,
         }
     }
 
-    async readData(chrom) {
+    async readData(chrom, start, end) {
         await this.init();
         const offset = this.meta.offsets[chrom];
         if(!offset) {
             return null;
         }
+        const binkeys = binning.reg2bins(start, end);
+        const data = [];
+        binkeys.forEach(binkey => {
+            const container = this.meta.offsets[chrom][binkey];
+            if (container) {
+                const {offset, size} = container;
+            }
+        })
         const response = await this.file.read(offset.offset, offset.size);
         if(!response) {
             return null;
