@@ -118,6 +118,12 @@ def get_meta(g3d_filename):
     json.dump(header, sys.stdout, indent=4)
     print()
 
+def parse_3dg_to_g3d(file_name, out_file_name, genome, resolutions):
+    """
+    Parse the .3dg format to .g3d format.
+    """
+    pass
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='g3dtools', description='g3dtools for operating text structure files with g3d format.')
     subparsers = parser.add_subparsers(title='subcommands',
