@@ -18,9 +18,7 @@ npm install g3djs
 
     const url = "https://wangftp.wustl.edu/~dli/test/GM12878_chr1_chr2.g3d"
     const file = new G3dFile({url})
-    const header = await file.readHeader();
-
     file.readHeader()
-        .then(header => console.log(header))
+        .then(() => console.log(file.meta))
 
 ```
