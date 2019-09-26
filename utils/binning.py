@@ -80,13 +80,16 @@ class g3dElement(object):
         self.length = end - start
 
     def __str__(self):
-        return '{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype)
+        return '{} {} {} {} {} {} {}'.format(self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype)
 
     def __repr__(self):
         return self.__str__()
     
     def stringfyRegion(self):
         return '{}|{}|{}'.format(self.chrom, self.start, self.end)
+    
+    def to_array(self):
+        return [self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype]
 
 class g3dKeeper(object):
     '''g3d keeper object'''
@@ -150,6 +153,15 @@ class g3dKeeper(object):
                 binList = self.d[namekey][binkey]
                 lst.extend(binList)
         return lst
+    
+    def sort_by_start_each_bin(self):
+        c = {}
+        for i in self.d:
+            c[i] = {}
+            for k in self.d[i]:
+                s = sorted(self.d[i][k], key=lambda x: x.start)
+                c[i][k] = s
+        self.d = c
 
 def reg2bin(beg, end):
     '''convert region to bin, code from tabix'''
@@ -216,6 +228,70 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
 def parse_3dg_2_g3dKeeper(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim = '\t', chrom = '', header=False):
     return g3dKeeper(parse_3dg_file_to_g3dDict(f, keyIndex, startIndex, resolution, xkey, ykey, zkey, delim, chrom, header), resolution)
 
+def scale_keeper(keeper, steplen, fold=2):
+    """
+        scales the keeper to a lower resolution by applying certain fold aggreagation
+
+        :param keeper: the origin g3d keeper object
+        :return: a new scaled keeper
+    """
+    chrom = 'chr7'
+    # keeper.sort_by_start_each_bin()
+    binkeys = keeper.d[chrom]
+    # sbinkeys = sorted(binkeys)
+    pat = []
+    mat = []
+    both = []
+    for binkey in binkeys:
+        for x in keeper.d[chrom][binkey]:
+            if x.haplotype == 'mat' or x.haplotype == 'm':
+                mat.append(x)
+            elif x.haplotype == 'pat' or x.haplotype == 'p':
+                pat.append(x)
+            else:
+                both.append(x)
+    if len(pat) > 0:
+        patsort = sorted(pat, key=lambda x: x.start)
+        scaled = apply_scale(patsort, 20000, 5)
+        # print(scaled)
+        for x in scaled:
+            print(x)
+    if len(mat) > 0:
+        matsort = sorted(mat, key=lambda x: x.start)
+    if len(both) > 0:
+        bothsort = sorted(both, key=lambda x: x.start)
+        
+
+
+def apply_scale(elementList, steplen, fold):
+    total = len(elementList)
+    scaled = []
+    def scale_sub(start):
+        for i in range(start, total - fold, fold):
+            ok = []
+            for j in range(i, i+fold-1):
+                current = elementList[j]
+                next_one = elementList[j+1]
+                distance = next_one.start - current.start
+                if distance == steplen: # nearby interval
+                    ok.append(current)
+                    if j == i+fold-2:
+                        ok.append(next_one) # last iteration
+                elif distance < steplen:
+                    raise ValueError('{} and {} distance shorten than expected resolution {}'.format(current, next_one, steplen))
+                else:
+                    # a gap here
+                    scaled.append([current])
+                    scale_sub(j+1)
+            if len(ok) > 0:
+                scaled.append(ok)
+    scale_sub(0)
+    return scaled
+
+
+    
+
+
 def g3dElementAdd2Dict(d, namekey, start, end, x, y, z, haplotype):
     binkey = reg2bin(start, end)
     if namekey not in d:
@@ -232,14 +308,6 @@ def count_g3d_dict_element(d):
             c += len(d[i][k])
     return c
 
-def sort_g3d_dict_by_start(d):
-    c = {}
-    for i in d:
-        c[i] = {}
-        for k in d[i]:
-            s = sorted(d[i][k], key=lambda x: x.start)
-            c[i][k] = s
-    return c
 
 def g3d_dict_to_simple_dict(d):
     print('converting g3dDict to simple Dict', file=sys.stderr)
@@ -253,7 +321,8 @@ def g3d_dict_to_simple_dict(d):
 
 
 def main():
-    pass
+    keeper = parse_3dg_2_g3dKeeper('../test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz')
+    scale_keeper(keeper, 20000)
     
 
 if __name__=="__main__":

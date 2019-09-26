@@ -147,8 +147,9 @@ def parse_3dg_to_g3d(file_name, out_file_name, genome, sample, resolutions):
             for binkey in gk.d[namekey]:
                 binlist = gk.d[namekey][binkey]
                 binlist_str = [str(e) for e in binlist]
+                # binlist_array = [e.to_array() for e in binlist]
                 pkldata = pickle.dumps(binlist_str, protocol=3) # pickle custom object cannot unpicked in JS API, use string instead
-                compressed = zlib.compress(pkldata)
+                compressed = zlib.compress(pkldata)             # string also generates smaller files than array and object
                 size = len(compressed)
                 offsets[namekey][binkey] = {'offset': offset, 'size': size}
                 fout.write(compressed)
@@ -219,8 +220,8 @@ def write_contents_file_handle(fh_in, fh_out, data):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='g3dtools', description='g3dtools for operating text structure files with g3d format.')
     subparsers = parser.add_subparsers(title='subcommands',
-                                        description='valid subcommands',
-                                        help='additional help')
+                                    description='valid subcommands',
+                                    help='additional help')
     #dump
     parser_dump = subparsers.add_parser('dump', help='dump structure files to g3d file')
     parser_dump.add_argument('directory', help='directory contains structure files.')
@@ -250,7 +251,7 @@ if __name__ == '__main__':
     parser_query.add_argument('-c', '--chrom', help='chromosome.')
     parser_query.add_argument('-s', '--start', type=int, help='start position')
     parser_query.add_argument('-e', '--end', type=int, help='end position')
-    parser_query.add_argument('-r', '--resolution', help='specify one resolution, like 20000')
+    parser_query.add_argument('-r', '--resolution', type=int, help='specify one resolution, like 20000')
     parser_query.add_argument('-o', '--output', help='output file name, default outputs to screen')
     parser_query.add_argument('-C', '--wholeChrom', help='whether or not get contents from whole chromosome', action='store_true')
     parser_query.add_argument('-G', '--wholeGenome', help='whether or not get contents from whole genome', action='store_true')

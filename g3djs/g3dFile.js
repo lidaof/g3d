@@ -1,4 +1,5 @@
 const zlib = require('zlib');
+const _ = require('lodash');
 const BrowserLocalFile = require('./io/browserLocalFile');
 const RemoteFile = require('./io/remoteFile');
 const jpickle = require('jpickle');
@@ -82,22 +83,21 @@ class G3dFile {
             return null;
         }
         const binkeys = binning.reg2bins(start, end);
-        const data = [];
-        binkeys.forEach(async binkey => {
+        const promises = binkeys.map(async binkey => {
             const container = this.offsets[chrom][binkey.toString()]; // JS object key can only be string
             if (container) {
                 const {offset, size} = container;
                 const response = await this.file.read(offset, size);
-                console.log(response)
                 if(response) {
                     const buffer = Buffer.from(response);
                     const unzipped = await unzip(buffer);
-                    console.log(jpickle.loads(unzipped.toString('binary')))
-                    data.push(jpickle.loads(unzipped.toString('binary')));
+                    return jpickle.loads(unzipped.toString('binary'));
                 }
             }
         });
-        return data;
+        const data = await Promise.all(promises);
+        const filtered = _.flatten(data.filter(x=>x)).map(x => x.split(' '));
+        return filtered;
     }
 }
 
