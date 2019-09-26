@@ -1,6 +1,6 @@
 {
   "name": "g3djs",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Javascript API for reading g3d file",
   "main": "index.js",
   "scripts": {

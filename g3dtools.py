@@ -146,7 +146,8 @@ def parse_3dg_to_g3d(file_name, out_file_name, genome, sample, resolutions):
                 offsets[namekey] = {}
             for binkey in gk.d[namekey]:
                 binlist = gk.d[namekey][binkey]
-                pkldata = pickle.dumps(binlist, protocol=3)
+                binlist_str = [str(e) for e in binlist]
+                pkldata = pickle.dumps(binlist_str, protocol=3) # pickle custom object cannot unpicked in JS API, use string instead
                 compressed = zlib.compress(pkldata)
                 size = len(compressed)
                 offsets[namekey][binkey] = {'offset': offset, 'size': size}

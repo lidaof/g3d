@@ -19,5 +19,5 @@ columns are:
 python g3dtools.py dump test -g hg19 -s GM12878 -o GM12878_chr1_chr2
 
 
-python g3dtools.py 3dg test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz -o testOut/GSM3271347
+python g3dtools.py 3dg test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz -o testOut/GSM3271347_gm12878_01.impute3.round4.clean
 

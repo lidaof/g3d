@@ -120,8 +120,8 @@ class g3dKeeper(object):
         if namekey not in self.d: return lst
         binkeys = reg2bins(start, end)
         for binkey in binkeys:
-            if binkey not in d[namekey]: continue
-            binList = d[namekey][binkey]
+            if binkey not in self.d[namekey]: continue
+            binList = self.d[namekey][binkey]
             lst.extend(binList)
         return lst
 
@@ -133,8 +133,8 @@ class g3dKeeper(object):
         """
         lst = []
         if namekey not in self.d: return lst
-        for binkey in d[namekey]:
-            binList = d[namekey][binkey]
+        for binkey in self.d[namekey]:
+            binList = self.d[namekey][binkey]
             lst.extend(binList)
         return lst
     
@@ -145,9 +145,9 @@ class g3dKeeper(object):
             :return: a list of g3d elements
         """
         lst = []
-        for namekey in d:
-            for binkey in d[namekey]:
-                binList = d[namekey][binkey]
+        for namekey in self.d:
+            for binkey in self.d[namekey]:
+                binList = self.d[namekey][binkey]
                 lst.extend(binList)
         return lst
 
@@ -229,8 +229,7 @@ def count_g3d_dict_element(d):
     c = 0
     for i in d:
         for k in d[i]:
-            for j in d[i][k]:
-                c += 1
+            c += len(d[i][k])
     return c
 
 def sort_g3d_dict_by_start(d):

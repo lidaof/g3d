@@ -29,7 +29,7 @@ function* xrange(start, stop, step){
   * @param {*} end
   * @returns
   */
- export function reg2bin(beg, end){
+function reg2bin(beg, end){
     end -= 1;
     if (beg>>14 === end>>14){ return 4681 + (beg>>14);}
     if (beg>>17 === end>>17){ return  585 + (beg>>17);}
@@ -48,7 +48,7 @@ function* xrange(start, stop, step){
   * @param {*} end
   * @returns
   */
- export function reg2bins(beg, end){
+function reg2bins(beg, end){
     let lst = [];
     lst.push(0);
     if (beg >= end){ return lst;}

@@ -14,6 +14,7 @@ class G3dFile {
     constructor(config) {
         this.config = config;
         this.meta = {};
+        this.offsets = {};
 
         if(config.blob) {
             this.file = new BrowserLocalFile(config.blob);
@@ -59,7 +60,7 @@ class G3dFile {
         const version = header.version;
         const resolutions = header.resolutions;
         const sample = header.sample;
-        const offsets = header.offsets;
+        const offsets = header.offsets; // offset
         
         // Meta data for the g3d file
         this.meta = {
@@ -68,31 +69,35 @@ class G3dFile {
             version,
             resolutions,
             sample,
-            offsets,
-        }
+        };
+
+        this.offsets = {...offsets};
+
     }
 
     async readData(chrom, start, end) {
         await this.init();
-        const offset = this.meta.offsets[chrom];
+        const offset = this.offsets[chrom];
         if(!offset) {
             return null;
         }
         const binkeys = binning.reg2bins(start, end);
         const data = [];
-        binkeys.forEach(binkey => {
-            const container = this.meta.offsets[chrom][binkey];
+        binkeys.forEach(async binkey => {
+            const container = this.offsets[chrom][binkey.toString()]; // JS object key can only be string
             if (container) {
                 const {offset, size} = container;
+                const response = await this.file.read(offset, size);
+                console.log(response)
+                if(response) {
+                    const buffer = Buffer.from(response);
+                    const unzipped = await unzip(buffer);
+                    console.log(jpickle.loads(unzipped.toString('binary')))
+                    data.push(jpickle.loads(unzipped.toString('binary')));
+                }
             }
-        })
-        const response = await this.file.read(offset.offset, offset.size);
-        if(!response) {
-            return null;
-        }
-        const buffer = Buffer.from(response);
-        const unzipped = await unzip(buffer);
-        return jpickle.loads(unzipped.toString('binary'));
+        });
+        return data;
     }
 }
 
