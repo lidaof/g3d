@@ -71,16 +71,16 @@ class g3dElement(object):
     '''a g3d element object'''
     def __init__(self, chrom, start, end, x, y, z, haplotype='.'):
         self.chrom = chrom
-        self.start = start
-        self.end = end
-        self.x = x
-        self.y = y
-        self.z = z
+        self.start = int(start)
+        self.end = int(end)
+        self.x = float(x)
+        self.y = float(y)
+        self.z = float(z)
         self.haplotype = haplotype
         self.length = end - start
 
     def __str__(self):
-        return '{} {} {} {} {} {} {}'.format(self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype)
+        return '{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype)
 
     def __repr__(self):
         return self.__str__()
@@ -90,6 +90,23 @@ class g3dElement(object):
     
     def to_array(self):
         return [self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype]
+
+def summary_g3d_elements(element_list):
+    if len(element_list) == 0:
+        raise ValueError("empty element list to summary")
+    elif len(element_list) == 1:
+        return element_list[0]
+    else:
+        # the element list is sorted
+        chrom = element_list[0].chrom
+        hap = element_list[0].haplotype
+        start = element_list[0].start
+        end = element_list[-1].end
+        x = average([i.x for i in element_list])
+        y = average([i.y for i in element_list])
+        z = average([i.z for i in element_list])
+        return g3dElement(chrom, start, end, x, y, z, hap)
+    
 
 class g3dKeeper(object):
     '''g3d keeper object'''
@@ -135,7 +152,8 @@ class g3dKeeper(object):
             :return: a list of g3d elements in same chromosome
         """
         lst = []
-        if namekey not in self.d: return lst
+        if namekey not in self.d:
+            return lst
         for binkey in self.d[namekey]:
             binList = self.d[namekey][binkey]
             lst.extend(binList)
@@ -212,6 +230,7 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
             if chrom:
                 if namekey != chrom:
                     continue
+            if namekey!= 'chr7': continue
             start = int(t[startIndex])
             end = start + resolution
             binkey = reg2bin(start, end)
@@ -228,42 +247,65 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
 def parse_3dg_2_g3dKeeper(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim = '\t', chrom = '', header=False):
     return g3dKeeper(parse_3dg_file_to_g3dDict(f, keyIndex, startIndex, resolution, xkey, ykey, zkey, delim, chrom, header), resolution)
 
-def scale_keeper(keeper, steplen, fold=2):
+def scale_keeper(keeper, fold=2):
     """
         scales the keeper to a lower resolution by applying certain fold aggreagation
 
         :param keeper: the origin g3d keeper object
         :return: a new scaled keeper
     """
-    chrom = 'chr7'
+    # chrom = 'chr7'
     # keeper.sort_by_start_each_bin()
-    binkeys = keeper.d[chrom]
+    # binkeys = keeper.d[chrom]
     # sbinkeys = sorted(binkeys)
-    pat = []
-    mat = []
-    both = []
-    for binkey in binkeys:
-        for x in keeper.d[chrom][binkey]:
-            if x.haplotype == 'mat' or x.haplotype == 'm':
-                mat.append(x)
-            elif x.haplotype == 'pat' or x.haplotype == 'p':
-                pat.append(x)
-            else:
-                both.append(x)
-    if len(pat) > 0:
-        patsort = sorted(pat, key=lambda x: x.start)
-        scaled = apply_scale(patsort, 20000, 5)
-        # print(scaled)
-        for x in scaled:
-            print(x)
-    if len(mat) > 0:
-        matsort = sorted(mat, key=lambda x: x.start)
-    if len(both) > 0:
-        bothsort = sorted(both, key=lambda x: x.start)
-        
+    d = {}
+    for chrom in keeper.d:
+        if chrom!= 'chr7': continue
+        pat = []
+        mat = []
+        both = []
+        patscaled = []
+        matscaled = []
+        bothscaled = []
+        for binkey in keeper.d[chrom]:
+            for x in keeper.d[chrom][binkey]:
+                if x.haplotype == 'mat' or x.haplotype == 'm':
+                    mat.append(x)
+                elif x.haplotype == 'pat' or x.haplotype == 'p':
+                    pat.append(x)
+                else:
+                    both.append(x)
+        if len(pat) > 0:
+            patsort = sorted(pat, key=lambda x: x.start)
+            scaled = prepare_chunk(patsort, keeper.resolution, fold)
+            for x in scaled:
+                patscaled.append(summary_g3d_elements(x))
+                # print(summary_g3d_elements(x))
+            # sys.exit()
+        if len(mat) > 0:
+            matsort = sorted(mat, key=lambda x: x.start)
+            scaled = prepare_chunk(matsort, keeper.resolution, fold)
+            for x in scaled:
+                matscaled.append(summary_g3d_elements(x))
+        if len(both) > 0:
+            bothsort = sorted(both, key=lambda x: x.start)
+            scaled = prepare_chunk(bothsort, keeper.resolution, fold)
+            for x in scaled:
+                bothscaled.append(summary_g3d_elements(x))
+        d[chrom] = [patscaled, matscaled, bothscaled]
+
+    od = {} # output dict container
+    for chrom in d:
+        for scaled in d[chrom]:
+            for element in scaled:
+                g3d_element_add_to_dict(od, element)
+    return g3dKeeper(od, keeper.resolution * fold)
 
 
-def apply_scale(elementList, steplen, fold):
+def prepare_chunk(elementList, steplen, fold):
+    """
+        Prepare chunk for scaling, merge elements to nearby *fold* region, skip gaps
+    """
     total = len(elementList)
     scaled = []
     def scale_sub(start):
@@ -273,7 +315,7 @@ def apply_scale(elementList, steplen, fold):
                 current = elementList[j]
                 next_one = elementList[j+1]
                 distance = next_one.start - current.start
-                if distance == steplen: # nearby interval
+                if distance <= steplen * (fold - 1): # nearby interval or in fold interval range
                     ok.append(current)
                     if j == i+fold-2:
                         ok.append(next_one) # last iteration
@@ -288,18 +330,15 @@ def apply_scale(elementList, steplen, fold):
     scale_sub(0)
     return scaled
 
-
-    
-
-
-def g3dElementAdd2Dict(d, namekey, start, end, x, y, z, haplotype):
-    binkey = reg2bin(start, end)
+def g3d_element_add_to_dict(d, element):
+    binkey = reg2bin(element.start, element.end)
+    namekey = element.chrom
     if namekey not in d:
         d[namekey] = {}
     if binkey not in d[namekey]:
-        d[namekey][binkey] = [g3dElement(namekey, start, end, x, y, z, haplotype)]
+        d[namekey][binkey] = [element]
     else:
-        d[namekey][binkey].append(g3dElement(namekey, start, end, x, y, z, haplotype))
+        d[namekey][binkey].append(element)
 
 def count_g3d_dict_element(d):
     c = 0
@@ -322,7 +361,9 @@ def g3d_dict_to_simple_dict(d):
 
 def main():
     keeper = parse_3dg_2_g3dKeeper('../test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz')
-    scale_keeper(keeper, 20000)
+    keeper.write2File('x')
+    keeper2 = scale_keeper(keeper, 5)
+    keeper2.write2File('y')
     
 
 if __name__=="__main__":

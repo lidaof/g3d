@@ -125,14 +125,14 @@ def get_meta(g3d_filename):
     print()
 
 def parse_3dg_to_g3d_wrap(args):
-    parse_3dg_to_g3d(args.filename, args.output, args.genome, args.sample, args.resolutions)
+    parse_3dg_to_g3d(args.filename, args.output, args.genome, args.sample, args.resolution, args.scales)
 
-def parse_3dg_to_g3d(file_name, out_file_name, genome, sample, resolutions):
+def parse_3dg_to_g3d(file_name, out_file_name, genome, sample, resolution, scales):
     """
     Parse the .3dg format to .g3d format.
     """
-    d = parse_3dg_file_to_g3dDict(file_name)
-    gk = g3dKeeper(d, 20000)
+    d = parse_3dg_file_to_g3dDict(file_name, resolution=resolution)
+    gk = g3dKeeper(d, resolution=resolution)
     content = {} #key: resolution, value: g3dkeeper
     content[gk.resolution] = gk
     # write g3d file
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     parser_3dg.add_argument('filename', help='file in .3dg file, can be gzip compressed.')
     parser_3dg.add_argument('-g', '--genome', help='genome assembly, like hg19, m10 etc. default: unknow_genome', default='unknow_genome')
     parser_3dg.add_argument('-s', '--sample', help='sample name. default: unknow_sample', default='unknow_sample')
-    parser_3dg.add_argument('-r', '--resolutions', help='resolutions, like 20000,40000,80000. default: 0', default='0')
+    parser_3dg.add_argument('-r', '--resolution', type=int, help='3dg file resolution, like 20000. default: 20000', default=20000)
     parser_3dg.add_argument('-o', '--output', help='output file name. default: output', default='output')
     parser_3dg.set_defaults(func=parse_3dg_to_g3d_wrap)
 
