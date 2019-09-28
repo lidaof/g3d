@@ -119,8 +119,7 @@ class g3dKeeper(object):
         c = 0
         for i in self.d:
             for k in self.d[i]:
-                for j in self.d[i][k]:
-                    c += 1
+                c += len(self.d[i][k])
         return c
     
     def write2File(self, outf):
@@ -310,8 +309,7 @@ def prepare_chunk(elementList, steplen, fold):
     total = len(elementList)
     scaled = []
     start = 0
-    gap = False
-    def scale_sub(start):
+    def chunk_sub(start):
         gap = False
         for i in range(start, total - fold, fold):
             ok = [ elementList[i] ]
@@ -334,8 +332,8 @@ def prepare_chunk(elementList, steplen, fold):
             if gap: 
                 break
         if gap:
-            scale_sub(start)
-    scale_sub(start)
+            chunk_sub(start)
+    chunk_sub(start)
     return scaled
 
 def g3d_element_add_to_dict(d, element):

@@ -21,7 +21,7 @@ from utils.binning import parse_3dg_file_to_g3dDict, scale_keeper, g3dKeeper, re
 MAGIC = 'G3D'
 VERSION = 1
 
-HEADER_LENGTH = 1500000
+HEADER_LENGTH = 1024
 
 def structure_files_to_g3d_file_wrap(args):
     structure_files_to_g3d_file(args.directory, args.output, args.format, args.genome, args.name)
@@ -81,7 +81,24 @@ def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genom
 def read_header(fh):
     '''return the header of a g3d file'''
     header_pkl = fh.read(HEADER_LENGTH)
-    return pickle.loads(zlib.decompress(header_pkl))
+    return pickle.loads(header_pkl)
+
+def read_index(fh):
+    '''return index of a g3d file'''
+    header = read_header(fh)
+    position = header['index_offset']
+    size = header['index_size']
+    fh.seek(position)
+    index_pkl = fh.read(size)
+    return pickle.loads(zlib.decompress(index_pkl))
+
+def read_index_with_header(fh, header):
+    '''return index of a g3d file'''
+    position = header['index_offset']
+    size = header['index_size']
+    fh.seek(position)
+    index_pkl = fh.read(size)
+    return pickle.loads(zlib.decompress(index_pkl))
 
 def g3d_file_to_structure_files(g3d_filename):
     '''convert g3d to many text stucture files.'''
@@ -118,8 +135,10 @@ def get_meta(g3d_filename):
     '''convert g3d to many text stucture files.'''
     with open(g3d_filename, 'rb') as fin:
         header = read_header(fin)
-    del header['offsets'] # too big to print
+    # del header['offsets'] # too big to print
     del header['magic']
+    del header['index_offset']
+    del header['index_size']
     json.dump(header, sys.stdout, indent=4)
     print()
 
@@ -160,16 +179,22 @@ def parse_3dg_to_g3d(file_name, out_file_name, genome, name, resolution, scales)
                     offsets[reso][namekey][binkey] = {'offset': offset, 'size': size}
                     fout.write(compressed)
                     offset += size
+        # write footer
+        offsets_pkl = zlib.compress(pickle.dumps(offsets, protocol=3))
+        offsets_size = len(offsets_pkl)
+        fout.write(offsets_pkl)
         meta = {
             'magic': MAGIC,
             'version': VERSION,
             'genome': genome,
             'name': name,
-            'offsets': offsets,
+            'index_offset': offset,
+            'index_size': offsets_size,
             'resolutions': list(content.keys())
         }
+        # write header, uncompressed
         fout.seek(0)
-        meta_pkl = zlib.compress(pickle.dumps(meta, protocol=3))
+        meta_pkl = pickle.dumps(meta, protocol=3)
         meta_pkl_len = len(meta_pkl)
         # print(meta_pkl_len)
         for i in range(0, meta_pkl_len):
@@ -193,29 +218,29 @@ def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=F
         fout = sys.stdout
     with open(filename, 'rb') as fin:
         header = read_header(fin)
+        index = read_index_with_header(fin, header)
         if resolution not in header['resolutions']:
-            print('[Query] Error, resolution {} not exists for this file, \navailable resolutions: {}'.format(resolution, header['resolutions']), file=sys.stderr) 
+            print('[Query] Error, resolution {} not exists for this file. \navailable resolutions: {}'.format(resolution, header['resolutions']), file=sys.stderr) 
             fout.close()
             sys.exit(2)
-        offsets = header['offsets']
         if wholeGenome:
-            for chrom in offsets[resolution]:
-                for binkey in offsets[resolution][chrom]:
-                    write_contents_file_handle(fin, fout, offsets[resolution][chrom][binkey])
+            for chrom in index[resolution]:
+                for binkey in index[resolution][chrom]:
+                    write_contents_file_handle(fin, fout, index[resolution][chrom][binkey])
         elif wholeChrom:
-            if chrom not in offsets[resolution]:
+            if chrom not in index[resolution]:
                 fout.close()
                 return
-            for binkey in offsets[resolution][chrom]:
-                write_contents_file_handle(fin, fout, offsets[resolution][chrom][binkey])
+            for binkey in index[resolution][chrom]:
+                write_contents_file_handle(fin, fout, index[resolution][chrom][binkey])
         else:
-            if chrom not in offsets[resolution]:
+            if chrom not in index[resolution]:
                 fout.close()
                 return
             binkeys = reg2bins(start, end)
             for binkey in binkeys:
-                if binkey not in offsets[resolution][chrom]: continue
-                write_contents_file_handle(fin, fout, offsets[resolution][chrom][binkey])
+                if binkey not in index[resolution][chrom]: continue
+                write_contents_file_handle(fin, fout, index[resolution][chrom][binkey])
     if output:
         fout.close()
     
