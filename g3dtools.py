@@ -16,18 +16,17 @@ import zlib
 import json
 import glob
 import argparse
-from utils.binning import *
+from utils.binning import parse_3dg_file_to_g3dDict, scale_keeper, g3dKeeper, reg2bins
 
 MAGIC = 'G3D'
 VERSION = 1
 
-# FIXED header size 512000 bytes
-HEADER_LENGTH = 512000
+HEADER_LENGTH = 1500000
 
 def structure_files_to_g3d_file_wrap(args):
-    structure_files_to_g3d_file(args.directory, args.output, args.format, args.genome, args.sample)
+    structure_files_to_g3d_file(args.directory, args.output, args.format, args.genome, args.name)
 
-def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genome="unknow_genome", sample="unknow_sample"):
+def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genome="unknow_genome", name="unknow_name"):
     """
     Convert many text stucture files in one directory to a g3d format file.
     This folder should contain a list of files naming like chr1.pdb, chr2.pdb.. etc.
@@ -36,7 +35,7 @@ def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genom
     :param output: output g3d file name
     :param sformat: structure file format
     :param genome: genome information
-    :param sample: sample information
+    :param name: name information
     :return: null
     :raise: ValueError: raises ValueError while cannot find any structure file
 
@@ -69,7 +68,7 @@ def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genom
             'magic': MAGIC,
             'version': VERSION,
             'genome': genome,
-            'sample': sample,
+            'name': name,
             'offsets': offsets
         }
         fout.seek(0)
@@ -125,9 +124,9 @@ def get_meta(g3d_filename):
     print()
 
 def parse_3dg_to_g3d_wrap(args):
-    parse_3dg_to_g3d(args.filename, args.output, args.genome, args.sample, args.resolution, args.scales)
+    parse_3dg_to_g3d(args.filename, args.output, args.genome, args.name, args.resolution, args.scales)
 
-def parse_3dg_to_g3d(file_name, out_file_name, genome, sample, resolution, scales):
+def parse_3dg_to_g3d(file_name, out_file_name, genome, name, resolution, scales):
     """
     Parse the .3dg format to .g3d format.
     """
@@ -135,32 +134,39 @@ def parse_3dg_to_g3d(file_name, out_file_name, genome, sample, resolution, scale
     gk = g3dKeeper(d, resolution=resolution)
     content = {} #key: resolution, value: g3dkeeper
     content[gk.resolution] = gk
+    if scales:
+        scales2 = [int(x) for x in scales.split(',')]
+        for s in scales2:
+            content[gk.resolution * s] = scale_keeper(gk, s)
     # write g3d file
     header = bytearray(HEADER_LENGTH)
     offset = HEADER_LENGTH
     with open('{}.g3d'.format(out_file_name), 'wb') as fout:
         fout.seek(HEADER_LENGTH)
         offsets = {}
-        for namekey in gk.d:
-            if namekey not in offsets:
-                offsets[namekey] = {}
-            for binkey in gk.d[namekey]:
-                binlist = gk.d[namekey][binkey]
-                binlist_str = [str(e) for e in binlist]
-                # binlist_array = [e.to_array() for e in binlist]
-                pkldata = pickle.dumps(binlist_str, protocol=3) # pickle custom object cannot unpicked in JS API, use string instead
-                compressed = zlib.compress(pkldata)             # string also generates smaller files than array and object
-                size = len(compressed)
-                offsets[namekey][binkey] = {'offset': offset, 'size': size}
-                fout.write(compressed)
-                offset += size
+        for reso in content:
+            if reso not in offsets:
+                offsets[reso] = {}
+            for namekey in content[reso].d:
+                if namekey not in offsets[reso]:
+                    offsets[reso][namekey] = {}
+                for binkey in content[reso].d[namekey]:
+                    binlist = content[reso].d[namekey][binkey]
+                    binlist_str = [str(e) for e in binlist]
+                    # binlist_array = [e.to_array() for e in binlist]
+                    pkldata = pickle.dumps(binlist_str, protocol=3) # pickle custom object cannot unpicked in JS API, use string instead
+                    compressed = zlib.compress(pkldata)             # string also generates smaller files than array and object
+                    size = len(compressed)
+                    offsets[reso][namekey][binkey] = {'offset': offset, 'size': size}
+                    fout.write(compressed)
+                    offset += size
         meta = {
             'magic': MAGIC,
             'version': VERSION,
             'genome': genome,
-            'sample': sample,
+            'name': name,
             'offsets': offsets,
-            'resolutions': [int(x) for x in resolutions.split(',')]
+            'resolutions': list(content.keys())
         }
         fout.seek(0)
         meta_pkl = zlib.compress(pickle.dumps(meta, protocol=3))
@@ -179,32 +185,37 @@ def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=F
     """
     if not (wholeChrom or wholeChrom):
         if not (chrom and start and end):
-            print('[Query] Error, please specify chromsome, start and end\n', file=sys.stderr)
+            print('[Query] Error, please specify chromsome, start and end', file=sys.stderr)
+            sys.exit(1)
     if output:
         fout = open(output, 'w')
     else:
         fout = sys.stdout
     with open(filename, 'rb') as fin:
         header = read_header(fin)
+        if resolution not in header['resolutions']:
+            print('[Query] Error, resolution {} not exists for this file, \navailable resolutions: {}'.format(resolution, header['resolutions']), file=sys.stderr) 
+            fout.close()
+            sys.exit(2)
         offsets = header['offsets']
         if wholeGenome:
-            for chrom in offsets:
-                for binkey in offsets[chrom]:
-                    write_contents_file_handle(fin, fout, offsets[chrom][binkey])
+            for chrom in offsets[resolution]:
+                for binkey in offsets[resolution][chrom]:
+                    write_contents_file_handle(fin, fout, offsets[resolution][chrom][binkey])
         elif wholeChrom:
-            if chrom not in offsets:
+            if chrom not in offsets[resolution]:
                 fout.close()
                 return
-            for binkey in offsets[chrom]:
-                write_contents_file_handle(fin, fout, offsets[chrom][binkey])
+            for binkey in offsets[resolution][chrom]:
+                write_contents_file_handle(fin, fout, offsets[resolution][chrom][binkey])
         else:
-            if chrom not in offsets:
+            if chrom not in offsets[resolution]:
                 fout.close()
                 return
             binkeys = reg2bins(start, end)
             for binkey in binkeys:
-                if binkey not in offsets[chrom]: continue
-                write_contents_file_handle(fin, fout, offsets[chrom][binkey])
+                if binkey not in offsets[resolution][chrom]: continue
+                write_contents_file_handle(fin, fout, offsets[resolution][chrom][binkey])
     if output:
         fout.close()
     
@@ -226,7 +237,7 @@ if __name__ == '__main__':
     parser_dump = subparsers.add_parser('dump', help='dump structure files to g3d file')
     parser_dump.add_argument('directory', help='directory contains structure files.')
     parser_dump.add_argument('-g', '--genome', help='genome assembly, like hg19, m10 etc. default: unknow_genome', default='unknow_genome')
-    parser_dump.add_argument('-s', '--sample', help='sample name. default: unknow_sample', default='unknow_sample')
+    parser_dump.add_argument('-n', '--name', help='name info. default: unknow_name', default='unknow_name')
     parser_dump.add_argument('-f', '--format', help='structure file format. default: pdb', default='pdb')
     parser_dump.add_argument('-o', '--output', help='output file name. default: output', default='output')
     parser_dump.set_defaults(func=structure_files_to_g3d_file_wrap)
@@ -235,8 +246,9 @@ if __name__ == '__main__':
     parser_3dg = subparsers.add_parser('3dg', help='dump 3dg structure files to a g3d file')
     parser_3dg.add_argument('filename', help='file in .3dg file, can be gzip compressed.')
     parser_3dg.add_argument('-g', '--genome', help='genome assembly, like hg19, m10 etc. default: unknow_genome', default='unknow_genome')
-    parser_3dg.add_argument('-s', '--sample', help='sample name. default: unknow_sample', default='unknow_sample')
+    parser_3dg.add_argument('-n', '--name', help='name information. default: unknow_name', default='unknow_name')
     parser_3dg.add_argument('-r', '--resolution', type=int, help='3dg file resolution, like 20000. default: 20000', default=20000)
+    parser_3dg.add_argument('-s', '--scales', help='scale to lower resolution, comma separated numbers, like 2,3,4')
     parser_3dg.add_argument('-o', '--output', help='output file name. default: output', default='output')
     parser_3dg.set_defaults(func=parse_3dg_to_g3d_wrap)
 
@@ -251,7 +263,7 @@ if __name__ == '__main__':
     parser_query.add_argument('-c', '--chrom', help='chromosome.')
     parser_query.add_argument('-s', '--start', type=int, help='start position')
     parser_query.add_argument('-e', '--end', type=int, help='end position')
-    parser_query.add_argument('-r', '--resolution', type=int, help='specify one resolution, like 20000')
+    parser_query.add_argument('-r', '--resolution', type=int, help='specify one resolution, default 20000', default=20000)
     parser_query.add_argument('-o', '--output', help='output file name, default outputs to screen')
     parser_query.add_argument('-C', '--wholeChrom', help='whether or not get contents from whole chromosome', action='store_true')
     parser_query.add_argument('-G', '--wholeGenome', help='whether or not get contents from whole genome', action='store_true')

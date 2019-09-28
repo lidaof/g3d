@@ -230,7 +230,7 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
             if chrom:
                 if namekey != chrom:
                     continue
-            if namekey!= 'chr7': continue
+            # if namekey!= 'chr7': continue
             start = int(t[startIndex])
             end = start + resolution
             binkey = reg2bin(start, end)
@@ -254,13 +254,14 @@ def scale_keeper(keeper, fold=2):
         :param keeper: the origin g3d keeper object
         :return: a new scaled keeper
     """
+    print('apply scale {}...'.format(fold), file=sys.stderr)
     # chrom = 'chr7'
     # keeper.sort_by_start_each_bin()
     # binkeys = keeper.d[chrom]
     # sbinkeys = sorted(binkeys)
     d = {}
     for chrom in keeper.d:
-        if chrom!= 'chr7': continue
+        # if chrom!= 'chr7': continue
         pat = []
         mat = []
         both = []
@@ -280,7 +281,7 @@ def scale_keeper(keeper, fold=2):
             scaled = prepare_chunk(patsort, keeper.resolution, fold)
             for x in scaled:
                 patscaled.append(summary_g3d_elements(x))
-                # print(summary_g3d_elements(x))
+                # print(x)
             # sys.exit()
         if len(mat) > 0:
             matsort = sorted(mat, key=lambda x: x.start)
@@ -308,26 +309,33 @@ def prepare_chunk(elementList, steplen, fold):
     """
     total = len(elementList)
     scaled = []
+    start = 0
+    gap = False
     def scale_sub(start):
+        gap = False
         for i in range(start, total - fold, fold):
-            ok = []
-            for j in range(i, i+fold-1):
+            ok = [ elementList[i] ]
+            for j in range(i+1, i+fold):
                 current = elementList[j]
-                next_one = elementList[j+1]
-                distance = next_one.start - current.start
+                distance = current.start - ok[0].start
                 if distance <= steplen * (fold - 1): # nearby interval or in fold interval range
                     ok.append(current)
-                    if j == i+fold-2:
-                        ok.append(next_one) # last iteration
+                    # if j == i+fold-1:
+                    #     ok.append(next_one) # last iteration
                 elif distance < steplen:
-                    raise ValueError('{} and {} distance shorten than expected resolution {}'.format(current, next_one, steplen))
+                    raise ValueError('{} and {} distance shorten than expected resolution {}'.format(current, ok[0], steplen))
                 else:
                     # a gap here
-                    scaled.append([current])
-                    scale_sub(j+1)
-            if len(ok) > 0:
-                scaled.append(ok)
-    scale_sub(0)
+                    # scaled.append(ok)
+                    gap = True
+                    start = j
+                    break
+            scaled.append(ok)
+            if gap: 
+                break
+        if gap:
+            scale_sub(start)
+    scale_sub(start)
     return scaled
 
 def g3d_element_add_to_dict(d, element):
@@ -355,14 +363,14 @@ def g3d_dict_to_simple_dict(d):
         for k in d[i]:
             for j in d[i][k]:
                 sd[j.stringfyRegion()] = str(j)
-    return sd
     print('done', file=sys.stderr)
+    return sd
 
 
 def main():
     keeper = parse_3dg_2_g3dKeeper('../test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz')
     keeper.write2File('x')
-    keeper2 = scale_keeper(keeper, 5)
+    keeper2 = scale_keeper(keeper, 2)
     keeper2.write2File('y')
     
 
