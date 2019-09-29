@@ -16,6 +16,7 @@ import zlib
 import json
 import glob
 import argparse
+import msgpack
 from utils.binning import parse_3dg_file_to_g3dDict, scale_keeper, g3dKeeper, reg2bins
 
 MAGIC = 'G3D'
@@ -81,7 +82,8 @@ def structure_files_to_g3d_file(directory, output="output", sformat="pdb", genom
 def read_header(fh):
     '''return the header of a g3d file'''
     header_pkl = fh.read(HEADER_LENGTH)
-    return pickle.loads(header_pkl)
+    # return pickle.loads(header_pkl)
+    return msgpack.unpackb(header_pkl.rstrip(b'\x00'), raw=False)
 
 def read_index(fh):
     '''return index of a g3d file'''
@@ -90,7 +92,8 @@ def read_index(fh):
     size = header['index_size']
     fh.seek(position)
     index_pkl = fh.read(size)
-    return pickle.loads(zlib.decompress(index_pkl))
+    # return pickle.loads(zlib.decompress(index_pkl))
+    return msgpack.unpackb(zlib.decompress(index_pkl), raw=False)
 
 def read_index_with_header(fh, header):
     '''return index of a g3d file'''
@@ -98,7 +101,8 @@ def read_index_with_header(fh, header):
     size = header['index_size']
     fh.seek(position)
     index_pkl = fh.read(size)
-    return pickle.loads(zlib.decompress(index_pkl))
+    # return pickle.loads(zlib.decompress(index_pkl))
+    return msgpack.unpackb(zlib.decompress(index_pkl), raw=False)
 
 def g3d_file_to_structure_files(g3d_filename):
     '''convert g3d to many text stucture files.'''
@@ -173,14 +177,16 @@ def parse_3dg_to_g3d(file_name, out_file_name, genome, name, resolution, scales)
                     binlist = content[reso].d[namekey][binkey]
                     binlist_str = [str(e) for e in binlist]
                     # binlist_array = [e.to_array() for e in binlist]
-                    pkldata = pickle.dumps(binlist_str, protocol=3) # pickle custom object cannot unpicked in JS API, use string instead
+                    pkldata = msgpack.packb(binlist_str, use_bin_type=True)
+                    # pkldata = pickle.dumps(binlist_str, protocol=3) # pickle custom object cannot unpicked in JS API, use string instead
                     compressed = zlib.compress(pkldata)             # string also generates smaller files than array and object
                     size = len(compressed)
                     offsets[reso][namekey][binkey] = {'offset': offset, 'size': size}
                     fout.write(compressed)
                     offset += size
         # write footer
-        offsets_pkl = zlib.compress(pickle.dumps(offsets, protocol=3))
+        # offsets_pkl = zlib.compress(pickle.dumps(offsets, protocol=3))
+        offsets_pkl = zlib.compress(msgpack.packb(offsets, use_bin_type=True))
         offsets_size = len(offsets_pkl)
         fout.write(offsets_pkl)
         meta = {
@@ -194,12 +200,15 @@ def parse_3dg_to_g3d(file_name, out_file_name, genome, name, resolution, scales)
         }
         # write header, uncompressed
         fout.seek(0)
-        meta_pkl = pickle.dumps(meta, protocol=3)
-        meta_pkl_len = len(meta_pkl)
-        # print(meta_pkl_len)
-        for i in range(0, meta_pkl_len):
-            header[i] = meta_pkl[i]
-        fout.write(header)
+        # meta_pkl = pickle.dumps(meta, protocol=3)
+        meta_pkl = msgpack.packb(meta, use_bin_type=True)
+        assert (len(meta_pkl) <= HEADER_LENGTH), "header size too big!!"
+        fout.write(meta_pkl)
+        # meta_pkl_len = len(meta_pkl)
+        # # print(meta_pkl_len)
+        # for i in range(0, meta_pkl_len):
+        #     header[i] = meta_pkl[i]
+        # fout.write(header)
 
 def query_g3d_file_wrap(args):
     query_g3d_file(args.filename, args.chrom, args.start, args.end, args.resolution, args.output, args.wholeChrom, args.wholeGenome)
@@ -249,7 +258,8 @@ def write_contents_file_handle(fh_in, fh_out, data):
     file_size = data['size']
     fh_in.seek(file_offset)
     file_pkl = fh_in.read(file_size)
-    contents = pickle.loads(zlib.decompress(file_pkl))
+    # contents = pickle.loads(zlib.decompress(file_pkl))
+    contents = msgpack.unpackb(zlib.decompress(file_pkl), raw=False)
     for con in contents:
         fh_out.write('{}\n'.format(con))
 

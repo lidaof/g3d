@@ -15,8 +15,8 @@ suite('RemoteG3dFile', function () {
         const url = "https://wangftp.wustl.edu/~dli/tmp/GSM3271347_gm12878_01.impute3.round4.clean.g3d"
         const file = new G3dFile({url})
         await file.readHeader();
-        const data = await file.readData('chr7',27053397, 27373765);
-        console.log(data)
+        const data = await file.readData('chr7',27053397, 27373765, 20000);
+        // console.log(data)
         assert.ok(data);
     })
 
