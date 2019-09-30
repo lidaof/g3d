@@ -2,8 +2,9 @@ const zlib = require('zlib');
 const _ = require('lodash');
 const BrowserLocalFile = require('./io/browserLocalFile');
 const RemoteFile = require('./io/remoteFile');
-const jpickle = require('jpickle');
+// const jpickle = require('jpickle');
 const util = require('util');
+const msgpack = require('@msgpack/msgpack');
 
 const binning = require('./utils/binning');
 
@@ -31,18 +32,26 @@ class G3dFile {
         }
     }
 
-    async init() {
-        if (this.initialized) {
+    async initHeader() {
+        if (this.headerReady) {
             return;
         } else {
             await this.readHeader();
+            this.headerReady = true;
+        }
+    }
+
+    async initFooter() {
+        if (this.footerReady) {
+            return;
+        } else {
             await this.readFooter();
-            this.initialized = true;
+            this.footerReady = true;
         }
     }
 
     async getMetaData() {
-        await this.readHeader();
+        await this.initHeader();
         return this.meta;
     }
 
@@ -53,9 +62,15 @@ class G3dFile {
         if (!response) {
             return undefined;
         }
+        // console.log(response)
 
         const buffer = Buffer.from(response);
-        const header = jpickle.loads(buffer.toString('binary'));
+        // const header = jpickle.loads(buffer.toString('binary'));
+        const size = this.getPackSize(buffer);
+        const newBuffer = buffer.slice(0, size);
+        // console.log(size)
+        const header = msgpack.decode(newBuffer);
+        // console.log(header)
         const magic = header.magic;
         const genome = header.genome;
         const version = header.version;
@@ -76,10 +91,18 @@ class G3dFile {
         };
     }
 
-    async readFooter() {
-        if (!this.meta) {
-            await this.readHeader();
+    getPackSize(buffer) {
+        let i = buffer.length;
+        for(; i--; i>=0) {
+            if (buffer[i] !== 0x00) {
+                return i+1;
+            }
         }
+        return i;
+    }
+
+    async readFooter() {
+        await this.initHeader();
         const {index_offset, index_size} = this.meta;
         const response = await this.file.read(index_offset, index_size);
 
@@ -89,12 +112,14 @@ class G3dFile {
 
         const buffer = Buffer.from(response);
         const unzipped = await unzip(buffer);
-        const footer = jpickle.loads(unzipped.toString('binary'));
+        // const footer = jpickle.loads(unzipped.toString('binary'));
+        const footer = msgpack.decode(unzipped);
         this.offsets = {...footer};
     }
 
     async readData(chrom, start, end, resolution=20000) {
-        await this.init();
+        await this.initHeader();
+        await this.initFooter();
         const resdata = this.offsets[resolution];
         if(!resdata) {
             return null;
@@ -112,12 +137,13 @@ class G3dFile {
                 if(response) {
                     const buffer = Buffer.from(response);
                     const unzipped = await unzip(buffer);
-                    return jpickle.loads(unzipped.toString('binary'));
+                    // return jpickle.loads(unzipped.toString('binary'));
+                    return msgpack.decode(unzipped);
                 }
             }
         });
         const data = await Promise.all(promises);
-        const filtered = _.flatten(data.filter(x=>x)).map(x => x.split('\t'));
+        const filtered = _.flatten(data.filter(x=>x)); //.map(x => x.split('\t'));
         return filtered;
     }
 }

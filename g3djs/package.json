@@ -9,6 +9,7 @@
   "author": "Daofeng Li",
   "license": "MIT",
   "dependencies": {
+    "@msgpack/msgpack": "^1.9.1",
     "browser-or-node": "^1.2.1",
     "chai": "^4.2.0",
     "cross-fetch": "^3.0.4",
