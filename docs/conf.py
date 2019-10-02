@@ -28,6 +28,7 @@ project = 'g3d'
 copyright = '2019, Daofeng Li'
 author = 'Daofeng Li'
 
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
