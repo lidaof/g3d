@@ -22,7 +22,9 @@ export default {
 <style scoped>
 .home {
   display: grid;
-  grid-template-columns: 2fr 10fr;
+  grid-template-columns: 2fr 8fr;
   grid-gap: 10px;
+  height: 100%;
+  width: 100%;
 }
 </style>

@@ -18,9 +18,9 @@
     <div class="field">
       <label>Select a resolution</label>
       <select v-model="g3d.resolution">
-        <option v-for="res in resolutions" :key="res" :value="res">{{
-          prettyRes(res)
-        }}</option>
+        <option v-for="res in resolutions" :key="res" :value="res">
+          {{ prettyRes(res) }}
+        </option>
       </select>
     </div>
     <div class="field">
@@ -42,7 +42,8 @@
           name="region"
           v-model="g3d.regionControl"
           value="region"
-        />Input region
+        />
+        Input region
       </label>
       <br />
       <label>
@@ -61,10 +62,12 @@
           name="region"
           v-model="g3d.regionControl"
           value="genome"
-        />Whole Genome
+        />
+        Whole Genome
       </label>
     </div>
     <button type="button" @click="fillExample">Example</button>
+    {{ ' ' }}
     <button type="submit">Go</button>
     <div v-if="error">{{ error }}</div>
     <div v-if="isLoading">Loading...</div>

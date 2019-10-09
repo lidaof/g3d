@@ -20,6 +20,7 @@
     "@vue/eslint-config-prettier": "^5.0.0",
     "babel-eslint": "^10.0.1",
     "babylonjs": "^4.0.3",
+    "babylonjs-gui": "^4.0.3",
     "eslint": "^5.16.0",
     "eslint-plugin-prettier": "^3.1.0",
     "eslint-plugin-vue": "^5.0.0",
