@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent>
+  <form @submit.prevent="handleSubmit">
     <div class="field">
       <label>Input a G3D file URL</label>
       <input
@@ -18,9 +18,9 @@
     <div class="field">
       <label>Select a resolution</label>
       <select v-model="g3d.resolution">
-        <option v-for="res in resolutions" :key="res" :value="res">
-          {{ prettyRes(res) }}
-        </option>
+        <option v-for="res in resolutions" :key="res" :value="res">{{
+          prettyRes(res)
+        }}</option>
       </select>
     </div>
     <div class="field">
@@ -64,20 +64,26 @@
         />Whole Genome
       </label>
     </div>
-    <button @click="fillExample">Example</button>
-    <button>Go</button>
+    <button type="button" @click="fillExample">Example</button>
+    <button type="submit">Go</button>
+    <div v-if="error">{{ error }}</div>
+    <div v-if="isLoading">Loading...</div>
   </form>
 </template>
 
 <script>
+import G3dFile from 'g3djs'
+import { mapState } from 'vuex'
 export default {
   name: 'Menu',
   data() {
     return {
       g3d: this.createFreshG3d(),
-      resolutions: this.$store.state.resolutions
+      resolutions: this.$store.state.resolutions,
+      error: null
     }
   },
+  computed: mapState(['isLoading']),
   methods: {
     fillExample() {
       ;(this.g3d.url =
@@ -94,6 +100,16 @@ export default {
     },
     prettyRes(res) {
       return res / 1000 + 'K'
+    },
+    async handleSubmit() {
+      if (!this.g3d.url.length) {
+        this.error = 'Please submit a URL'
+        return
+      }
+      this.$store.dispatch('setG3d', this.g3d)
+      const gf = new G3dFile({ url: this.g3d.url })
+      this.$store.dispatch('setG3dFile', gf)
+      await this.$store.dispatch('fetchData')
     }
   }
 }
