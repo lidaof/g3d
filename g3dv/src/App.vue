@@ -17,7 +17,6 @@ html,
 body {
   width: 100%;
   height: 100%;
-  overflow: hidden;
   margin: 0;
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;

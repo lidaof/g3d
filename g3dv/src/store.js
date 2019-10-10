@@ -51,7 +51,10 @@ export default new Vuex.Store({
         27373765,
         20000
       )
-      commit('SET_DATA3D', data)
+      const sorted = data.sort(
+        (a, b) => a[0].localeCompare(b[0]) || a[1] - b[1]
+      )
+      commit('SET_DATA3D', sorted)
       commit('SET_LOADING_STATUS')
     }
   }
