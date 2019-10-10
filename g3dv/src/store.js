@@ -45,16 +45,17 @@ export default new Vuex.Store({
     },
     async fetchData({ commit, state }) {
       commit('SET_LOADING_STATUS')
-      const data = await state.g3dFile.readData(
+      const data = await state.g3dFile.readDataChromosome(
         'chr7',
-        27053397,
-        27373765,
-        20000
+        // 27053397,
+        // 27373765,
+        200000
       )
       const sorted = data.sort(
         (a, b) => a[0].localeCompare(b[0]) || a[1] - b[1]
       )
-      commit('SET_DATA3D', sorted)
+      const pat = sorted.filter(item => item[6] === 'pat')
+      commit('SET_DATA3D', pat)
       commit('SET_LOADING_STATUS')
     }
   }
