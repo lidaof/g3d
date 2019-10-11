@@ -4,7 +4,8 @@ import { deconstructMesh } from '@/helper'
  * this component renders a 3D tube given the data3d array data
  */
 
-export function renderTube(data, scene) {
+export function renderTubeToScene(data, scene) {
+  console.log('render tube...')
   if (!data.length) {
     return
   }

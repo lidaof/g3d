@@ -3,8 +3,10 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
 import * as BABYLON from 'babylonjs'
 // import * as GUI from 'babylonjs-gui'
+import { renderTubeToScene } from '@/components/Tube'
 
 export default {
   name: 'BabylonScene',
@@ -15,21 +17,22 @@ export default {
       scene: null
     }
   },
-  props: {
-    data: {
-      type: Array
-      //   required: true
-    },
-    onSceneMount: {
-      type: Function
-    }
-  },
+  // props: {
+  //   data: {
+  //     type: Array
+  //     //   required: true
+  //   },
+  //   onSceneMount: {
+  //     type: Function
+  //   }
+  // },
+  computed: mapState(['g3d', 'data3d']),
   methods: {
     init() {
       this.canvas = this.$refs.renderCanvas
       this.engine = new BABYLON.Engine(this.canvas, true)
-      let scene = new BABYLON.Scene(this.engine)
-      this.scene = scene
+      this.scene = new BABYLON.Scene(this.engine)
+      // this.scene = scene
       //camera
       //   this.mainCamera = new BABYLON.ArcRotateCamera(
       //     'ArcRotateCamera',
@@ -54,20 +57,15 @@ export default {
       //     new BABYLON.Vector3(0, 1, 0),
       //     this.scene
       //   )
-      //   // VR
-      //   this.vrHelper = this.scene.createDefaultVRExperience({
-      //     createDeviceOrientationCamera: false
+      // if (typeof this.onSceneMount === 'function') {
+      //   this.onSceneMount({
+      //     scene,
+      //     engine: this.engine,
+      //     canvas: this.canvas
       //   })
-      console.log('xxx')
-      if (typeof this.onSceneMount === 'function') {
-        this.onSceneMount({
-          scene,
-          engine: this.engine,
-          canvas: this.canvas
-        })
-      } else {
-        console.error('onSceneMount function not available')
-      }
+      // } else {
+      //   console.error('onSceneMount function not available')
+      // }
 
       //   this.engine.runRenderLoop(() => {
       //     if (this.scene) {
@@ -83,11 +81,21 @@ export default {
   },
   mounted() {
     this.init()
-
+    this.$emit('sceneReady', {
+      scene: this.scene,
+      engine: this.engine,
+      canvas: this.canvas
+    })
     // Resize the babylon engine when the window is resized
     window.addEventListener('resize', this.onResizeWindow)
   },
-
+  watch: {
+    data3d(newData, oldData) {
+      if (newData !== oldData) {
+        renderTubeToScene(newData, this.scene)
+      }
+    }
+  },
   beforeDestroy() {
     window.removeEventListener('resize', this.onResizeWindow)
   }

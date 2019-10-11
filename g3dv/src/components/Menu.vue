@@ -18,9 +18,9 @@
     <div class="field">
       <label>Select a resolution</label>
       <select v-model="g3d.resolution">
-        <option v-for="res in resolutions" :key="res" :value="res">
-          {{ prettyRes(res) }}
-        </option>
+        <option v-for="res in resolutions" :key="res" :value="res">{{
+          prettyRes(res)
+        }}</option>
       </select>
     </div>
     <div class="field">

@@ -24,7 +24,7 @@ export default new Vuex.Store({
   },
   mutations: {
     SET_G3D(state, g) {
-      state.g3d = g
+      Vue.set(state, 'g3d', { ...g })
     },
     SET_LOADING_STATUS(state) {
       state.isLoading = !state.isLoading
@@ -33,7 +33,7 @@ export default new Vuex.Store({
       Vue.set(state, 'data3d', [...data])
     },
     SET_G3D_FILE(state, gf) {
-      state.g3dFile = gf
+      Vue.set(state, 'g3dFile', gf)
     }
   },
   actions: {
