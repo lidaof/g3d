@@ -30,7 +30,7 @@ export default new Vuex.Store({
       state.isLoading = !state.isLoading
     },
     SET_DATA3D(state, data) {
-      state.data3d = data
+      Vue.set(state, 'data3d', [...data])
     },
     SET_G3D_FILE(state, gf) {
       state.g3dFile = gf
