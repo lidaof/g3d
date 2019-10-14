@@ -69,7 +69,8 @@
     <button type="button" @click="fillExample">Example</button>
     {{ ' ' }}
     <button type="submit">Go</button>
-    <div v-if="error">{{ error }}</div>
+    <div class="-text-error" v-if="error">{{ error }}</div>
+    <div class="-text-error" v-if="stateErrorMsg">{{ stateErrorMsg }}</div>
     <div v-if="isLoading">Loading...</div>
   </form>
 </template>
@@ -86,7 +87,7 @@ export default {
       error: null
     }
   },
-  computed: mapState(['isLoading']),
+  computed: mapState(['isLoading', 'stateErrorMsg']),
   methods: {
     fillExample() {
       ;(this.g3d.url =

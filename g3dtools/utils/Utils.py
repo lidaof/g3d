@@ -2,10 +2,14 @@
 # programmer : Daofeng
 # usage:
 
-import sys, gzip
+import sys
+import gzip
+import os
+
 
 def centerOf(start, end):
     return start + (end - start)/2
+
 
 def xread(fn):
     if fn.endswith('.gz'):
@@ -13,11 +17,13 @@ def xread(fn):
     else:
         return open(fn, 'rU')
 
+
 def xwrite(fn):
     if fn.endswith('.gz'):
         return gzip.open(fn, 'wb')
     else:
         return open(fn, 'w')
+
 
 def fileLines(f):
     c = 0
@@ -26,11 +32,14 @@ def fileLines(f):
             c += 1
     return c
 
+
 def average(values):
     return sum(values, 0.0) / len(values)
-    
+
+
 def olapBase(s1, e1, start, end):
     return min(e1, end) - max(s1, start)
+
 
 def removeOverlapPart(s1, e1, start, end):
     me = min(e1, end)
@@ -46,10 +55,11 @@ def removeOverlapPart(s1, e1, start, end):
         r = [[s1, e1]]
     return r
 
+
 def splitRegion(start, end, cnt):
     l = end - start
     c = l/cnt
-    r = l%cnt
+    r = l % cnt
     lis = []
     rr = r
     for i in range(cnt):
@@ -58,7 +68,7 @@ def splitRegion(start, end, cnt):
             lis.append(c+1)
         else:
             lis.append(c)
-    #return lis
+    # return lis
     lis2 = []
     ts = start
     for i in range(cnt):
@@ -67,8 +77,10 @@ def splitRegion(start, end, cnt):
         ts = te
     return lis2
 
+
 class g3dElement(object):
     '''a g3d element object'''
+
     def __init__(self, chrom, start, end, x, y, z, haplotype='.'):
         self.chrom = chrom
         self.start = int(start)
@@ -84,12 +96,13 @@ class g3dElement(object):
 
     def __repr__(self):
         return self.__str__()
-    
+
     def stringfyRegion(self):
         return '{}|{}|{}'.format(self.chrom, self.start, self.end)
-    
+
     def to_array(self):
         return [self.chrom, self.start, self.end, self.x, self.y, self.z, self.haplotype]
+
 
 def summary_g3d_elements(element_list):
     if len(element_list) == 0:
@@ -106,10 +119,11 @@ def summary_g3d_elements(element_list):
         y = average([i.y for i in element_list])
         z = average([i.z for i in element_list])
         return g3dElement(chrom, start, end, x, y, z, hap)
-    
+
 
 class g3dKeeper(object):
     '''g3d keeper object'''
+
     def __init__(self, d, resolution):
         self.d = d
         self.namekeylist = d.keys()
@@ -121,7 +135,7 @@ class g3dKeeper(object):
             for k in self.d[i]:
                 c += len(self.d[i][k])
         return c
-    
+
     def write2File(self, outf):
         with open(outf, 'w') as fout:
             for i in self.d:
@@ -132,14 +146,16 @@ class g3dKeeper(object):
     def get_g3d_element_by_region(self, namekey, start, end):
         """
             query g3d elements using chromsome, start ane end
-            
+
             :return: a list of g3d elements in same bin
         """
         lst = []
-        if namekey not in self.d: return lst
+        if namekey not in self.d:
+            return lst
         binkeys = reg2bins(start, end)
         for binkey in binkeys:
-            if binkey not in self.d[namekey]: continue
+            if binkey not in self.d[namekey]:
+                continue
             binList = self.d[namekey][binkey]
             lst.extend(binList)
         return lst
@@ -157,7 +173,7 @@ class g3dKeeper(object):
             binList = self.d[namekey][binkey]
             lst.extend(binList)
         return lst
-    
+
     def get_all_g3d_element(self):
         """
             query all g3d elements
@@ -170,7 +186,7 @@ class g3dKeeper(object):
                 binList = self.d[namekey][binkey]
                 lst.extend(binList)
         return lst
-    
+
     def sort_by_start_each_bin(self):
         c = {}
         for i in self.d:
@@ -180,45 +196,59 @@ class g3dKeeper(object):
                 c[i][k] = s
         self.d = c
 
+
 def reg2bin(beg, end):
     '''convert region to bin, code from tabix'''
     end -= 1
-    if (beg>>14 == end>>14): return 4681 + (beg>>14)
-    if (beg>>17 == end>>17): return  585 + (beg>>17)
-    if (beg>>20 == end>>20): return   73 + (beg>>20)
-    if (beg>>23 == end>>23): return    9 + (beg>>23)
-    if (beg>>26 == end>>26): return    1 + (beg>>26)
+    if (beg >> 14 == end >> 14):
+        return 4681 + (beg >> 14)
+    if (beg >> 17 == end >> 17):
+        return 585 + (beg >> 17)
+    if (beg >> 20 == end >> 20):
+        return 73 + (beg >> 20)
+    if (beg >> 23 == end >> 23):
+        return 9 + (beg >> 23)
+    if (beg >> 26 == end >> 26):
+        return 1 + (beg >> 26)
     return 0
+
 
 def reg2bins(beg, end):
     '''convert region to bins, code from tabix'''
     lst = []
     lst.append(0)
-    if (beg >= end): return lst
-    if (end >= 1<<29): end = 1<<29
+    if (beg >= end):
+        return lst
+    if (end >= 1 << 29):
+        end = 1 << 29
     end -= 1
-    for k in range(1 + (beg>>26), 1 + (end>>26) + 1):
+    for k in range(1 + (beg >> 26), 1 + (end >> 26) + 1):
         lst.append(k)
-    for k in range(9 + (beg>>23), 9 + (end>>23) + 1):
+    for k in range(9 + (beg >> 23), 9 + (end >> 23) + 1):
         lst.append(k)
-    for k in range(73 + (beg>>20), 73 + (end>>20) + 1): 
+    for k in range(73 + (beg >> 20), 73 + (end >> 20) + 1):
         lst.append(k)
-    for k in range(585 + (beg>>17), 585 + (end>>17) + 1):
+    for k in range(585 + (beg >> 17), 585 + (end >> 17) + 1):
         lst.append(k)
-    for k in range(4681 + (beg>>14), 4681 + (end>>14) + 1):
+    for k in range(4681 + (beg >> 14), 4681 + (end >> 14) + 1):
         lst.append(k)
     return lst
 
 
-def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim = '\t', chrom = '', header=False):
-    print('reading file {} to g3dDict...'.format(f), file=sys.stderr)
+def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim='\t', chrom='', header=False):
+    print('Reading file {}'.format(f), file=sys.stderr)
+    if not os.path.exists(f):
+        print('Error: {} not exist, please check'.format(f), file=sys.stderr)
+        sys.exit(2)
     d = {}
     c = 0
     with xread(f) as fin:
-        if header: next(fin)
+        if header:
+            next(fin)
         for line in fin:
             lin = line.strip()
-            if not lin: continue
+            if not lin:
+                continue
             # print(lin)
             # sys.exit()
             t = lin.split(delim)
@@ -226,6 +256,10 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
             if not name.startswith('chr'):
                 namekey = 'chr{}'.format(name)
             hap = hap.rstrip(')')
+            if hap == 'pat':
+                hap = 'p'
+            if hap == 'mat':
+                hap = 'm'
             if chrom:
                 if namekey != chrom:
                     continue
@@ -236,15 +270,23 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
             if namekey not in d:
                 d[namekey] = {}
             if binkey not in d[namekey]:
-                d[namekey][binkey] = [g3dElement(namekey, start, end, t[xkey], t[ykey], t[zkey], hap)]
+                d[namekey][binkey] = [g3dElement(
+                    namekey, start, end, t[xkey], t[ykey], t[zkey], hap)]
             else:
-                d[namekey][binkey].append(g3dElement(namekey, start, end, t[xkey], t[ykey], t[zkey], hap))
+                d[namekey][binkey].append(g3dElement(
+                    namekey, start, end, t[xkey], t[ykey], t[zkey], hap))
             c += 1
-    print('done read {} records'.format(c), file=sys.stderr)
+    print('Done read {} records'.format(c), file=sys.stderr)
     return d
 
-def parse_3dg_2_g3dKeeper(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim = '\t', chrom = '', header=False):
-    return g3dKeeper(parse_3dg_file_to_g3dDict(f, keyIndex, startIndex, resolution, xkey, ykey, zkey, delim, chrom, header), resolution)
+
+def parse_3dg_2_g3dKeeper(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim='\t', chrom='', header=False):
+    d = parse_3dg_file_to_g3dDict(
+        f, keyIndex, startIndex, resolution, xkey, ykey, zkey, delim, chrom, header)
+    dk = g3dKeeper(d, resolution)
+    dk.sort_by_start_each_bin()
+    return dk
+
 
 def scale_keeper(keeper, fold=2):
     """
@@ -253,7 +295,7 @@ def scale_keeper(keeper, fold=2):
         :param keeper: the origin g3d keeper object
         :return: a new scaled keeper
     """
-    print('apply scale {}...'.format(fold), file=sys.stderr)
+    print('Applying scale {}'.format(fold), file=sys.stderr)
     # chrom = 'chr7'
     # keeper.sort_by_start_each_bin()
     # binkeys = keeper.d[chrom]
@@ -269,9 +311,9 @@ def scale_keeper(keeper, fold=2):
         bothscaled = []
         for binkey in keeper.d[chrom]:
             for x in keeper.d[chrom][binkey]:
-                if x.haplotype == 'mat' or x.haplotype == 'm':
+                if x.haplotype == 'm':
                     mat.append(x)
-                elif x.haplotype == 'pat' or x.haplotype == 'p':
+                elif x.haplotype == 'p':
                     pat.append(x)
                 else:
                     both.append(x)
@@ -294,7 +336,7 @@ def scale_keeper(keeper, fold=2):
                 bothscaled.append(summary_g3d_elements(x))
         d[chrom] = [patscaled, matscaled, bothscaled]
 
-    od = {} # output dict container
+    od = {}  # output dict container
     for chrom in d:
         for scaled in d[chrom]:
             for element in scaled:
@@ -309,19 +351,22 @@ def prepare_chunk(elementList, steplen, fold):
     total = len(elementList)
     scaled = []
     start = 0
+
     def chunk_sub(start):
         gap = False
         for i in range(start, total - fold, fold):
-            ok = [ elementList[i] ]
+            ok = [elementList[i]]
             for j in range(i+1, i+fold):
                 current = elementList[j]
                 distance = current.start - ok[0].start
-                if distance <= steplen * (fold - 1): # nearby interval or in fold interval range
+                # nearby interval or in fold interval range
+                if distance <= steplen * (fold - 1):
                     ok.append(current)
                     # if j == i+fold-1:
                     #     ok.append(next_one) # last iteration
                 elif distance < steplen:
-                    raise ValueError('{} and {} distance shorten than expected resolution {}'.format(current, ok[0], steplen))
+                    raise ValueError('{} and {} distance shorten than expected resolution {}'.format(
+                        current, ok[0], steplen))
                 else:
                     # a gap here
                     # scaled.append(ok)
@@ -329,12 +374,13 @@ def prepare_chunk(elementList, steplen, fold):
                     start = j
                     break
             scaled.append(ok)
-            if gap: 
+            if gap:
                 break
         if gap:
             chunk_sub(start)
     chunk_sub(start)
     return scaled
+
 
 def g3d_element_add_to_dict(d, element):
     binkey = reg2bin(element.start, element.end)
@@ -345,6 +391,7 @@ def g3d_element_add_to_dict(d, element):
         d[namekey][binkey] = [element]
     else:
         d[namekey][binkey].append(element)
+
 
 def count_g3d_dict_element(d):
     c = 0
@@ -366,11 +413,12 @@ def g3d_dict_to_simple_dict(d):
 
 
 def main():
-    keeper = parse_3dg_2_g3dKeeper('../test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz')
+    keeper = parse_3dg_2_g3dKeeper(
+        '../../test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz')
     keeper.write2File('x')
     keeper2 = scale_keeper(keeper, 2)
     keeper2.write2File('y')
-    
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

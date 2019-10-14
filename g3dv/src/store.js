@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import { parseRegionString, ensureMaxListLength } from './helper'
 
 Vue.use(Vuex)
 
@@ -20,7 +21,8 @@ export default new Vuex.Store({
     g3d: {},
     data3d: [],
     isLoading: false,
-    g3dFile: null
+    g3dFile: null,
+    stateErrorMsg: null
   },
   mutations: {
     SET_G3D(state, g) {
@@ -34,6 +36,9 @@ export default new Vuex.Store({
     },
     SET_G3D_FILE(state, gf) {
       Vue.set(state, 'g3dFile', gf)
+    },
+    SET_STATE_ERROR_MSG(state, msg) {
+      Vue.set(state, 'stateErrorMsg', msg)
     }
   },
   actions: {
@@ -44,18 +49,40 @@ export default new Vuex.Store({
       commit('SET_G3D_FILE', gf)
     },
     async fetchData({ commit, state }) {
+      const { region, resolution, regionControl } = state.g3d
+      const parsedRegion = parseRegionString(region)
+      console.log(parsedRegion)
+      if (parsedRegion.error) {
+        commit('SET_STATE_ERROR_MSG', parsedRegion.error)
+        return
+      }
       commit('SET_LOADING_STATUS')
-      const data = await state.g3dFile.readDataChromosome(
-        'chr7',
-        // 27053397,
-        // 27373765,
-        200000
-      )
+      let data
+      switch (regionControl) {
+        case 'genome':
+          data = await state.g3dFile.readDataGenome(resolution)
+          break
+        case 'chrom':
+          data = await state.g3dFile.readDataChromosome(
+            parsedRegion.chr,
+            resolution
+          )
+          break
+        case 'region':
+        default:
+          data = await state.g3dFile.readData(
+            parsedRegion.chr,
+            parsedRegion.start,
+            parsedRegion.end,
+            resolution
+          )
+      }
       const sorted = data.sort(
         (a, b) => a[0].localeCompare(b[0]) || a[1] - b[1]
       )
       const pat = sorted.filter(item => item[6] === 'pat')
-      commit('SET_DATA3D', pat)
+      const ensured = ensureMaxListLength(pat, 2000)
+      commit('SET_DATA3D', ensured)
       commit('SET_LOADING_STATUS')
     }
   }
