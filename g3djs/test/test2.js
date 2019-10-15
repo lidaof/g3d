@@ -7,15 +7,15 @@
 // console.log(meta);
 
 
-const fs = require('fs');
-const msgpack = require('@msgpack/msgpack');
+// const fs = require('fs');
+// const msgpack = require('@msgpack/msgpack');
 
-const readStream = fs.createReadStream('/Users/dli/test.dat', {start: 0, end: 13});
+// const readStream = fs.createReadStream('/Users/dli/test.dat', {start: 0, end: 13});
 
-test = async function (stream) {
-    for await (const item of msgpack.decodeStream(stream)) {
-        console.log(item);
-      }
-}
+// test = async function (stream) {
+//     for await (const item of msgpack.decodeStream(stream)) {
+//         console.log(item);
+//       }
+// }
 
-test(readStream)
+// test(readStream)

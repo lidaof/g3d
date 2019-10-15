@@ -288,6 +288,58 @@ def parse_3dg_2_g3dKeeper(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2,
     return dk
 
 
+def parse_g3d_bed_file_to_g3dDict(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=4, zkey=5, hapIndex=6, resolution=20000, delim='\t', chrom='', header=False):
+    print('Reading file {}'.format(f), file=sys.stderr)
+    if not os.path.exists(f):
+        print('Error: {} not exist, please check'.format(f), file=sys.stderr)
+        sys.exit(2)
+    d = {}
+    c = 0
+    with xread(f) as fin:
+        if header:
+            next(fin)
+        for line in fin:
+            lin = line.strip()
+            if not lin:
+                continue
+            # print(lin)
+            # sys.exit()
+            t = lin.split(delim)
+            namekey = t[keyIndex]
+            if not namekey.startswith('chr'):
+                namekey = 'chr{}'.format(namekey)
+            hap = t[6]
+            if hap == 'pat':
+                hap = 'p'
+            if hap == 'mat':
+                hap = 'm'
+            if chrom:
+                if namekey != chrom:
+                    continue
+            start = int(t[startIndex])
+            end = int(t[endIndex])
+            binkey = reg2bin(start, end)
+            if namekey not in d:
+                d[namekey] = {}
+            if binkey not in d[namekey]:
+                d[namekey][binkey] = [g3dElement(
+                    namekey, start, end, t[xkey], t[ykey], t[zkey], hap)]
+            else:
+                d[namekey][binkey].append(g3dElement(
+                    namekey, start, end, t[xkey], t[ykey], t[zkey], hap))
+            c += 1
+    print('Done read {} records'.format(c), file=sys.stderr)
+    return d
+
+
+def parse_g3d_bed_g3dKeeper(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=4, zkey=5, hapIndex=6, resolution=20000, delim='\t', chrom='', header=False):
+    d = parse_g3d_bed_file_to_g3dDict(
+        f, keyIndex, startIndex, endIndex, xkey, ykey, zkey, hapIndex, resolution, delim, chrom, header)
+    dk = g3dKeeper(d, resolution)
+    dk.sort_by_start_each_bin()
+    return dk
+
+
 def scale_keeper(keeper, fold=2):
     """
         scales the keeper to a lower resolution by applying certain fold aggreagation
