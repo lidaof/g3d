@@ -10,13 +10,13 @@ const binning = require("./utils/binning");
 
 const unzip = util.promisify(zlib.unzip);
 
-const HEADER_SIZE = 1024;
+const HEADER_SIZE = 64000;
 
 class G3dFile {
   constructor(config) {
     this.config = config;
     this.meta = null;
-    this.offsets = null;
+    // this.offsets = null;
 
     if (config.blob) {
       this.file = new BrowserLocalFile(config.blob);
@@ -41,14 +41,14 @@ class G3dFile {
     }
   }
 
-  async initFooter() {
-    if (this.footerReady) {
-      return;
-    } else {
-      await this.readFooter();
-      this.footerReady = true;
-    }
-  }
+  // async initFooter() {
+  //   if (this.footerReady) {
+  //     return;
+  //   } else {
+  //     await this.readFooter();
+  //     this.footerReady = true;
+  //   }
+  // }
 
   async getMetaData() {
     await this.initHeader();
@@ -75,8 +75,7 @@ class G3dFile {
     const version = header.version;
     const resolutions = header.resolutions;
     const name = header.name;
-    const index_offset = header.index_offset;
-    const index_size = header.index_size;
+    const offsets = header.offsets;
 
     // Meta data for the g3d file
     this.meta = {
@@ -85,8 +84,7 @@ class G3dFile {
       version,
       resolutions,
       name,
-      index_offset,
-      index_size
+      offsets,
     };
   }
 
@@ -100,40 +98,53 @@ class G3dFile {
     return i;
   }
 
-  async readFooter() {
-    await this.initHeader();
-    const { index_offset, index_size } = this.meta;
-    const response = await this.file.read(index_offset, index_size);
+  // async readFooter() {
+  //   await this.initHeader();
+  //   const { index_offset, index_size } = this.meta;
+  //   const response = await this.file.read(index_offset, index_size);
 
-    if (!response) {
-      return undefined;
+  //   if (!response) {
+  //     return undefined;
+  //   }
+
+  //   const buffer = Buffer.from(response);
+  //   const unzipped = await unzip(buffer);
+  //   // const footer = jpickle.loads(unzipped.toString('binary'));
+  //   const footer = msgpack.decode(unzipped);
+  //   this.offsets = { ...footer };
+  // }
+
+  async readDataChunk(offsetInfo, binkeys) {
+    let sbinkeys = [];
+    if(binkeys) {
+      sbinkeys = binkeys.map(key => key.toString()); // JS object key can only be string
     }
-
-    const buffer = Buffer.from(response);
-    const unzipped = await unzip(buffer);
-    // const footer = jpickle.loads(unzipped.toString('binary'));
-    const footer = msgpack.decode(unzipped);
-    this.offsets = { ...footer };
-  }
-
-  async readDataFromBin(binkey, offsetInfo) {
-    const index = offsetInfo[binkey.toString()]; // JS object key can only be string
-    if (index) {
-      const { offset, size } = index;
-      const response = await this.file.read(offset, size);
-      if (response) {
-        const buffer = Buffer.from(response);
-        const unzipped = await unzip(buffer);
-        // return jpickle.loads(unzipped.toString('binary'));
-        return msgpack.decode(unzipped);
-      }
+    const {offset, size} = offsetInfo;
+    const response = await this.file.read(offset, size);
+    if (response) {
+      const buffer = Buffer.from(response);
+      const unzipped = await unzip(buffer);
+      const out = msgpack.decode(unzipped);
+      const data = [];
+      Object.keys(out).forEach(key => {
+        if(sbinkeys.length) {
+          if(sbinkeys.includes(key)){
+            data.push(out[key])
+          }
+        } else {
+          data.push(out[key])
+        }
+      });
+      return _.flatten(data);
+    } else {
+      return undefined;
     }
   }
 
   async readData(chrom, start, end, resolution = 20000) {
     await this.initHeader();
-    await this.initFooter();
-    const resdata = this.offsets[resolution];
+    // await this.initFooter();
+    const resdata = this.meta.offsets[resolution];
     if (!resdata) {
       return null;
     }
@@ -142,18 +153,15 @@ class G3dFile {
       return null;
     }
     const binkeys = binning.reg2bins(start, end);
-    const promises = binkeys.map(binkey =>
-      this.readDataFromBin(binkey, offset)
-    );
-    const data = await Promise.all(promises);
-    const filtered = _.flatten(data.filter(x => x)); //.map(x => x.split('\t'));
-    return filtered;
+    const data = await this.readDataChunk(offset, binkeys);
+    // const data = _.flatten(data1.filter(x => x)); //.map(x => x.split('\t'));
+    const region = `${chrom}:${start}-${end}`;
+    return [{region, data, resolution}];
   }
 
   async readDataChromosome(chrom, resolution = 200000) {
     await this.initHeader();
-    await this.initFooter();
-    const resdata = this.offsets[resolution];
+    const resdata = this.meta.offsets[resolution];
     if (!resdata) {
       return null;
     }
@@ -161,37 +169,24 @@ class G3dFile {
     if (!offset) {
       return null;
     }
-    const promises = Object.keys(offset).map(binkey =>
-      this.readDataFromBin(binkey, offset)
-    );
-    const data = await Promise.all(promises);
-    const filtered = _.flatten(data);
-    return filtered;
+    const data = await this.readDataChunk(offset);
+    return [{region: chrom, data, resolution}];
   }
 
   /**
-   * somehow parallel access genome wide data will cause apache2 complain `server reached MaxRequestWorkers setting`
-   * so use a for loop instead
+   *
    * @param {number} resolution
    */
   async readDataGenome(resolution = 200000) {
     await this.initHeader();
-    await this.initFooter();
-    const resdata = this.offsets[resolution];
+    const resdata = this.meta.offsets[resolution];
     if (!resdata) {
       return null;
     }
-    // const promises = Object.keys(resdata).map(chrom =>
-    //   this.readDataChromosome(chrom, resolution)
-    // );
-    // const data = await Promise.all(promises);
-    // // console.log(data);
-    // const filtered = _.flatten(data);
-    const data = [];
-    Object.keys(resdata).forEach(async chrom => {
-      const tmp = await this.readDataChromosome(chrom, resolution);
-      data.push(tmp);
-    });
+    const promises = Object.keys(resdata).map(chrom =>
+      this.readDataChromosome(chrom, resolution)
+    );
+    const data = await Promise.all(promises);
     const filtered = _.flatten(data);
     return filtered;
   }

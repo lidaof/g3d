@@ -1,8 +1,22 @@
 import * as BABYLON from 'babylonjs'
+import _ from 'lodash'
+import iwanthue from 'iwanthue'
 // import { deconstructMesh } from '@/helper'
 /**
  * this component renders a 3D tube given the data3d array data
  */
+
+function reformatData(data) {
+  const grouped = _.groupBy(data, x => x[6])
+  const sorted = {}
+  Object.keys(grouped).forEach(key => {
+    const sort = grouped[key].sort(
+      (a, b) => a[0].localeCompare(b[0]) || a[1] - b[1]
+    )
+    sorted[key] = sort
+  })
+  return sorted
+}
 
 export function renderTubeToScene(data, scene) {
   console.log('render tube...')
@@ -10,26 +24,42 @@ export function renderTubeToScene(data, scene) {
     console.error('error: data for tube is empty')
     return
   }
-  const pointArray = data.map(
-    item => new BABYLON.Vector3(item[3], item[4], item[5])
-  )
-  console.log(pointArray.length)
-  const catmullRom = BABYLON.Curve3.CreateCatmullRomSpline(pointArray, 6, false)
-  const path = catmullRom.getPoints()
-  console.log(path.length)
-  const chromosome = BABYLON.TubeBuilder.CreateTube(
-    'chromosome',
-    {
-      path,
-      radius: 0.1,
-      cap: BABYLON.Mesh.CAP_ALL
-    },
-    scene
-  )
+  const palette = iwanthue(data.length * 2)
+  console.log(palette)
+  data.forEach((dat, datIndex) => {
+    const formatted = reformatData(dat.data)
 
-  const material = new BABYLON.StandardMaterial('material', scene)
-  material.diffuseColor = new BABYLON.Color4(1, 0, 0, 0.7)
-  chromosome.material = material
+    Object.keys(formatted).forEach((key, keyIndex) => {
+      const tubeData = formatted[key]
+
+      const pointArray = tubeData.map(
+        item => new BABYLON.Vector3(item[3], item[4], item[5])
+      )
+      console.log(pointArray.length)
+      const catmullRom = BABYLON.Curve3.CreateCatmullRomSpline(
+        pointArray,
+        6,
+        false
+      )
+      const path = catmullRom.getPoints()
+      console.log(path.length)
+      const chromosome = BABYLON.TubeBuilder.CreateTube(
+        'chromosome',
+        {
+          path,
+          radius: 0.1,
+          cap: BABYLON.Mesh.CAP_ALL
+        },
+        scene
+      )
+
+      const material = new BABYLON.StandardMaterial('material', scene)
+      material.diffuseColor = new BABYLON.Color3.FromHexString(
+        palette[datIndex + keyIndex]
+      )
+      chromosome.material = material
+    })
+  })
 
   // chromosome.subdivide(pointArray.length)
   // // console.log(chromosome.subMeshes, chromosome.subdivide(pointArray.length));

@@ -22,7 +22,7 @@ from utils import Utils
 MAGIC = 'G3D'
 VERSION = 1
 
-HEADER_LENGTH = 1024  # 1KB
+HEADER_LENGTH = 64000
 
 # def structure_files_to_g3d_file_wrap(args):
 #     structure_files_to_g3d_file(args.directory, args.output, args.format, args.genome, args.name)
@@ -148,10 +148,8 @@ def get_meta(g3d_filename):
     '''convert g3d to many text stucture files.'''
     with open(g3d_filename, 'rb') as fin:
         header = read_header(fin)
-    # del header['offsets'] # too big to print
+    del header['offsets'] # too big to print
     del header['magic']
-    del header['index_offset']
-    del header['index_size']
     json.dump(header, sys.stdout, indent=4)
     print()
 
@@ -183,6 +181,54 @@ def parse_g3d_bed(file_name, out_file_name, genome, name, resolution, scales):
 
 
 def write_g3d(gk, out_file_name, genome, name, scales):
+    """
+    The function writes the .g3d file
+    """
+    content = {}  # key: resolution, value: g3dkeeper
+    content[gk.resolution] = gk
+    if scales:
+        scales2 = [int(x) for x in scales.split(',')]
+        for s in scales2:
+            content[gk.resolution * s] = Utils.scale_keeper(gk, s)
+    # write g3d file
+    offset = HEADER_LENGTH
+    with open('{}.g3d'.format(out_file_name), 'wb') as fout:
+        fout.seek(HEADER_LENGTH)
+        offsets = {}
+        for reso in content:
+            if reso not in offsets:
+                offsets[reso] = {}
+            for namekey in sorted(content[reso].d.keys()):
+                out = {}
+                for binkey in sorted(content[reso].d[namekey].keys()):
+                    binlist = content[reso].d[namekey][binkey]
+                    binlist_sorted = sorted(binlist, key=lambda x: x.start)
+                    binlist_topack = [e.to_array() for e in binlist_sorted]
+                    out[binkey] = binlist_topack
+                pkldata = msgpack.packb(out, use_bin_type=True)
+                compressed = zlib.compress(pkldata)
+                size = len(compressed)
+                offsets[reso][namekey] = {
+                    'offset': offset, 'size': size}
+                fout.write(compressed)
+                offset += size
+        meta = {
+            'magic': MAGIC,
+            'version': VERSION,
+            'genome': genome,
+            'name': name,
+            'offsets': offsets,
+            'resolutions': list(content.keys()),
+        }
+        # meta_pkl = zlib.compress(msgpack.packb(meta, use_bin_type=True))
+        meta_pkl = msgpack.packb(meta, use_bin_type=True)
+        # print(len(meta_pkl))
+        assert (len(meta_pkl) <= HEADER_LENGTH), "header size too big! please contact maintainer lidaof@gmail.com for this issue."
+        # write header
+        fout.seek(0)
+        fout.write(meta_pkl)
+
+def write_g3d_small_chunks(gk, out_file_name, genome, name, scales):
     """
     The function writes the .g3d file
     """
@@ -281,45 +327,42 @@ def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=F
         fout = sys.stdout
     with open(filename, 'rb') as fin:
         header = read_header(fin)
-        index = read_index_with_header(fin, header)
+        offsets = header['offsets']
+        # index = read_index_with_header(fin, header)
         if resolution not in header['resolutions']:
             print('[Query] Error, resolution {} not exists for this file. \navailable resolutions: {}'.format(
                 resolution, header['resolutions']), file=sys.stderr)
             fout.close()
             sys.exit(2)
         if wholeGenome:
-            for chrom in index[resolution]:
-                for binkey in index[resolution][chrom]:
-                    write_contents_file_handle(
-                        fin, fout, index[resolution][chrom][binkey])
+            # for chrom in index[resolution]:
+            #     for binkey in index[resolution][chrom]:
+            #         write_contents_file_handle(
+            #             fin, fout, index[resolution][chrom][binkey])
             # using the full size index instead, faster?
-            # full_offsets = header['full_offsets']
-            # for chrom in full_offsets[resolution]:
-            #     write_contents_file_handle_full(
-            #         fin, fout, full_offsets[resolution][chrom])
+            
+            for chrom in offsets[resolution]:
+                write_contents_file_handle_full(
+                    fin, fout, offsets[resolution][chrom])
         elif wholeChrom:
-            if chrom not in index[resolution]:
-                fout.close()
-                return
-            for binkey in index[resolution][chrom]:
-                write_contents_file_handle(
-                    fin, fout, index[resolution][chrom][binkey])
-            # full_offsets = header['full_offsets']
-            # if chrom not in full_offsets[resolution]:
+            # if chrom not in index[resolution]:
             #     fout.close()
             #     return
-            # write_contents_file_handle_full(
-            #     fin, fout, full_offsets[resolution][chrom])
+            # for binkey in index[resolution][chrom]:
+            #     write_contents_file_handle(
+            #         fin, fout, index[resolution][chrom][binkey])
+            if chrom not in offsets[resolution]:
+                fout.close()
+                return
+            write_contents_file_handle_full(
+                fin, fout, offsets[resolution][chrom])
         else:
-            if chrom not in index[resolution]:
+            if chrom not in offsets[resolution]:
                 fout.close()
                 return
             binkeys = Utils.reg2bins(start, end)
-            for binkey in binkeys:
-                if binkey not in index[resolution][chrom]:
-                    continue
-                write_contents_file_handle(
-                    fin, fout, index[resolution][chrom][binkey])
+            write_contents_file_handle_full(
+                    fin, fout, offsets[resolution][chrom], binkeys)
     if output:
         fout.close()
 
@@ -336,16 +379,20 @@ def write_contents_file_handle(fh_in, fh_out, data):
         # print(*con, sep='\t', file=fh_out)
 
 
-def write_contents_file_handle_full(fh_in, fh_out, data):
+def write_contents_file_handle_full(fh_in, fh_out, data, binkeys=[]):
     # to be FIXED: compressed msg packed data, how to decompress and unpack
+    need_check = False
     file_offset = data['offset']
     file_size = data['size']
     fh_in.seek(file_offset)
     file_pkl = fh_in.read(file_size)
-    unp = msgpack.Unpacker(raw=False)
-    unp.feed(zlib.decompress(file_pkl))
-    for cons in unp:
-        for con in cons:
+    out = msgpack.unpackb(zlib.decompress(file_pkl), raw=False)
+    if len(binkeys) > 0: 
+        need_check = True
+    for binkey in out:
+        if need_check:
+            if binkey not in binkeys: continue
+        for con in out[binkey]:
             fh_out.write('{}\n'.format('\t'.join(map(str, con))))
 
 
@@ -374,7 +421,7 @@ if __name__ == '__main__':
     parser_load.add_argument(
         '-n', '--name', help='name information. default: unknow_name', default='unknow_name')
     parser_load.add_argument('-r', '--resolution', type=int,
-                             help='3dg file resolution, like 20000. default: 20000', default=20000)
+                             help='g3d bed file resolution, like 20000. default: 20000', default=20000)
     parser_load.add_argument(
         '-s', '--scales', help='scale to lower resolution, comma separated numbers, like 2,3,4')
     parser_load.add_argument(
@@ -413,7 +460,7 @@ if __name__ == '__main__':
     parser_query.add_argument('-s', '--start', type=int, help='start position')
     parser_query.add_argument('-e', '--end', type=int, help='end position')
     parser_query.add_argument('-r', '--resolution', type=int,
-                              help='specify one resolution, default 20000', default=20000)
+                              help='specify one resolution, default 200000', default=200000)
     parser_query.add_argument(
         '-o', '--output', help='output file name, default outputs to screen')
     parser_query.add_argument(

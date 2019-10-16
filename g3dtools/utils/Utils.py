@@ -308,7 +308,10 @@ def parse_g3d_bed_file_to_g3dDict(f, keyIndex=0, startIndex=1, endIndex=2, xkey=
             namekey = t[keyIndex]
             if not namekey.startswith('chr'):
                 namekey = 'chr{}'.format(namekey)
-            hap = t[6]
+            if len(t) < 7:
+                hap = 's'
+            else:
+                hap = t[6]
             if hap == 'pat':
                 hap = 'p'
             if hap == 'mat':

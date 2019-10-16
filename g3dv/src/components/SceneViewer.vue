@@ -23,6 +23,7 @@ export default {
       const { canvas, scene, engine } = e
 
       scene.clearColor = new BABYLON.Color3.White()
+      scene.autoclear = true
       // const camera = new BABYLON.ArcRotateCamera(
       //   'camera1',
       //   BABYLON.Tools.ToRadians(45),
@@ -36,7 +37,7 @@ export default {
       // This creates and positions a free camera (non-mesh)
       const camera = new BABYLON.FreeCamera(
         'camera1',
-        new BABYLON.Vector3(6, -5, -10),
+        new BABYLON.Vector3(5, -5, -30),
         scene
       )
       // // This targets the camera to scene origin

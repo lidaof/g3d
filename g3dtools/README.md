@@ -4,7 +4,7 @@ A tool for operating .g3d (genome 3D structure) format.
 
 Require: Python (Recommend version 3 and above).
 
-example input, 6 column bed-like text file:
+example input, 6 columns bed-like text file:
 
 ```bash
 chr7    16760000        16780000        -14.3866688728  -36.3919302029  19.8483965881   m
@@ -36,12 +36,12 @@ columns are:
 -   X (coordinates in 3D)
 -   Y
 -   Z
--   haplotype, m for maternal, p for paternal, . for shared
+-   haplotype (optional), `m` for `maternal`, `p` for `paternal`, `s` for `shared`, if omitted, `s` will be used
 
 ## Generate a new .g3d file using the format listed above
 
 ```console
-g3dtools load ../test/test.g3d.bed.gz -o ../testOut/test.3dg -s 2,3,4,5,6,7,8,9,10
+g3dtools load ../test/test.g3d.bed.gz -o ../testOut/test -s 2,3,4,5,6,7,8,9,10
 ```
 
 ## Generate a new .g3d file from .3dg format
@@ -59,19 +59,19 @@ or prepare different resolution files in advance:
 By region:
 
 ```console
-g3dtools query testOut/GSM3271347_gm12878_01.impute3.round4.clean.g3d -c chr7 -s 27053397 -e 27373765
+g3dtools query testOut/test.g3d -c chr7 -s 27053397 -e 27373765
 ```
 
 change resolution:
 
 ```console
-g3dtools query testOut/GSM3271347_gm12878_01.impute3.round4.clean.g3d -c chr7 -s 27053397 -e 27373765 -r 100000
+g3dtools query testOut/test.g3d -c chr7 -s 27053397 -e 27373765 -r 100000
 ```
 
 when resolution not exists:
 
 ```console
-$ g3dtools query testOut/GSM3271347_gm12878_01.impute3.round4.clean.g3d -c chr7 -s 27053397 -e 27373765 -r 130000
+$ g3dtools query testOut/test.g3d -c chr7 -s 27053397 -e 27373765 -r 130000
 [Query] Error, resolution 130000 not exists for this file,
 available resolutions: [20000, 40000, 60000, 80000, 100000, 120000, 140000, 160000, 180000, 200000]
 ```
