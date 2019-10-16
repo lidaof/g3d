@@ -18,9 +18,9 @@
     <div class="field">
       <label>Select a resolution</label>
       <select v-model="g3d.resolution">
-        <option v-for="res in resolutions" :key="res" :value="res">{{
-          prettyRes(res)
-        }}</option>
+        <option v-for="res in resolutions" :key="res" :value="res">
+          {{ prettyRes(res) }}
+        </option>
       </select>
     </div>
     <div class="field">
@@ -90,8 +90,7 @@ export default {
   computed: mapState(['isLoading', 'stateErrorMsg']),
   methods: {
     fillExample() {
-      ;(this.g3d.url =
-        'https://wangftp.wustl.edu/~dli/tmp/GSM3271347_gm12878_01.impute3.round4.clean.g3d'),
+      ;(this.g3d.url = 'https://wangftp.wustl.edu/~dli/tmp/test.g3d'),
         (this.g3d.region = 'chr7:27053397-27373765')
     },
     createFreshG3d() {

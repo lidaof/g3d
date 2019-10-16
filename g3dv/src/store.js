@@ -77,10 +77,11 @@ export default new Vuex.Store({
             resolution
           )
       }
+      // const data = await this.state.g3dFile.readDataGenome(200000)
       const sorted = data.sort(
         (a, b) => a[0].localeCompare(b[0]) || a[1] - b[1]
       )
-      const pat = sorted.filter(item => item[6] === 'pat')
+      const pat = sorted.filter(item => item[6] === 'p')
       const ensured = ensureMaxListLength(pat, 2000)
       commit('SET_DATA3D', ensured)
       commit('SET_LOADING_STATUS')

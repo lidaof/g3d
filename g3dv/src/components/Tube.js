@@ -1,5 +1,5 @@
 import * as BABYLON from 'babylonjs'
-import { deconstructMesh } from '@/helper'
+// import { deconstructMesh } from '@/helper'
 /**
  * this component renders a 3D tube given the data3d array data
  */
@@ -7,6 +7,7 @@ import { deconstructMesh } from '@/helper'
 export function renderTubeToScene(data, scene) {
   console.log('render tube...')
   if (!data.length) {
+    console.error('error: data for tube is empty')
     return
   }
   const pointArray = data.map(
@@ -25,42 +26,47 @@ export function renderTubeToScene(data, scene) {
     },
     scene
   )
-  chromosome.subdivide(pointArray.length)
-  // console.log(chromosome.subMeshes, chromosome.subdivide(pointArray.length));
 
-  const chromosomeSegments = deconstructMesh(chromosome)
+  const material = new BABYLON.StandardMaterial('material', scene)
+  material.diffuseColor = new BABYLON.Color4(1, 0, 0, 0.7)
+  chromosome.material = material
 
-  /**
-   * Color non-duplication relies on knowing colors of all the segments
-   * @type {MeshColorPair[]}
-   */
-  const returnSegments = []
+  // chromosome.subdivide(pointArray.length)
+  // // console.log(chromosome.subMeshes, chromosome.subdivide(pointArray.length));
 
-  chromosomeSegments.forEach((mesh, index) => {
-    let color, rand
-    rand = Math.random()
-    if (rand < 0.25) {
-      color = new BABYLON.Color4(1, 1, 1, 0.7)
-    } else if (rand >= 0.25 && rand < 0.5) {
-      color = new BABYLON.Color4(1, 0, 0, 1)
-    } else if (rand >= 0.5 && rand < 0.75) {
-      color = new BABYLON.Color4(0, 1, 0, 1)
-    } else {
-      color = new BABYLON.Color4(1, 1, 0, 1)
-    }
+  // const chromosomeSegments = deconstructMesh(chromosome)
 
-    const materialColor = new BABYLON.StandardMaterial('materialcolor', scene)
-    materialColor.diffuseColor = color
-    materialColor.computeHighLevel = true
-    mesh.material = materialColor
-    returnSegments.push({
-      segment: mesh,
-      color: color,
-      vector: pointArray[index]
-    })
-  })
+  // /**
+  //  * Color non-duplication relies on knowing colors of all the segments
+  //  * @type {MeshColorPair[]}
+  //  */
+  // const returnSegments = []
 
-  chromosome.dispose()
+  // chromosomeSegments.forEach((mesh, index) => {
+  //   let color, rand
+  //   rand = Math.random()
+  //   if (rand < 0.25) {
+  //     color = new BABYLON.Color4(1, 1, 1, 0.7)
+  //   } else if (rand >= 0.25 && rand < 0.5) {
+  //     color = new BABYLON.Color4(1, 0, 0, 1)
+  //   } else if (rand >= 0.5 && rand < 0.75) {
+  //     color = new BABYLON.Color4(0, 1, 0, 1)
+  //   } else {
+  //     color = new BABYLON.Color4(1, 1, 0, 1)
+  //   }
 
-  return returnSegments
+  //   const materialColor = new BABYLON.StandardMaterial('materialcolor', scene)
+  //   materialColor.diffuseColor = color
+  //   materialColor.computeHighLevel = true
+  //   mesh.material = materialColor
+  //   returnSegments.push({
+  //     segment: mesh,
+  //     color: color,
+  //     vector: pointArray[index]
+  //   })
+  // })
+
+  // chromosome.dispose()
+
+  // return returnSegments
 }

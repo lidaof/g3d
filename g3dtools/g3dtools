@@ -243,7 +243,7 @@ def write_g3d(gk, out_file_name, genome, name, scales):
         # meta_pkl = pickle.dumps(meta, protocol=3)
         meta_pkl = msgpack.packb(meta, use_bin_type=True)
         # print(len(meta_pkl))
-        assert (len(meta_pkl) <= HEADER_LENGTH), "header size too big!!"
+        assert (len(meta_pkl) <= HEADER_LENGTH), "header size too big! please contact maintainer lidaof@gmail.com for this issue."
         # write header, uncompressed
         fout.seek(0)
         fout.write(meta_pkl)

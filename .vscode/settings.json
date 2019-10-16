@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/Users/dli/anaconda3/bin/python",
+    "python.pythonPath": "/anaconda3/bin/python",
     "restructuredtext.confPath": "${workspaceFolder}/docs",
     "editor.fontSize": 13,
     "python.autoComplete.extraPaths": ["./g3dtools"],
