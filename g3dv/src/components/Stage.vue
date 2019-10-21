@@ -1,13 +1,14 @@
 <template>
-  <SceneViewer />
+  <ThreeScene />
 </template>
 
 <script>
-import SceneViewer from '@/components/SceneViewer.vue'
+// import SceneViewer from '@/components/SceneViewer.vue'
+import ThreeScene from '@/components/ThreeScene.vue'
 export default {
   name: 'Stage',
   components: {
-    SceneViewer
+    ThreeScene
   }
 }
 </script>
