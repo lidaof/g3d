@@ -31,6 +31,7 @@
     "stats-js": "^1.0.1",
     "three": "^0.109.0",
     "three-orbitcontrols": "^2.108.1",
+    "three.meshline": "^1.2.0",
     "vue-template-compiler": "^2.6.10"
   }
 }

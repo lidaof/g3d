@@ -1,5 +1,8 @@
-import * as BABYLON from 'babylonjs'
+// import * as BABYLON from 'babylonjs'
 import * as THREE from 'three'
+// import { Line2 } from 'three/examples/jsm/lines/Line2.js'
+// import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
+// import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import _ from 'lodash'
 import iwanthue from 'iwanthue'
 // import { deconstructMesh } from '@/helper'
@@ -19,88 +22,88 @@ function reformatData(data) {
   return sorted
 }
 
-export function renderTubeToScene(data, scene) {
-  console.log('render tube...')
-  if (!data.length) {
-    console.error('error: data for tube is empty')
-    return
-  }
-  const palette = iwanthue(data.length * 2)
-  console.log(palette)
-  data.forEach((dat, datIndex) => {
-    const formatted = reformatData(dat.data)
+// export function renderTubeToScene(data, scene) {
+//   console.log('render tube...')
+//   if (!data.length) {
+//     console.error('error: data for tube is empty')
+//     return
+//   }
+//   const palette = iwanthue(data.length * 2)
+//   console.log(palette)
+//   data.forEach((dat, datIndex) => {
+//     const formatted = reformatData(dat.data)
 
-    Object.keys(formatted).forEach((key, keyIndex) => {
-      const tubeData = formatted[key]
+//     Object.keys(formatted).forEach((key, keyIndex) => {
+//       const tubeData = formatted[key]
 
-      const pointArray = tubeData.map(
-        item => new BABYLON.Vector3(item[3], item[4], item[5])
-      )
-      console.log(pointArray.length)
-      const catmullRom = BABYLON.Curve3.CreateCatmullRomSpline(
-        pointArray,
-        6,
-        false
-      )
-      const path = catmullRom.getPoints()
-      console.log(path.length)
-      const chromosome = BABYLON.TubeBuilder.CreateTube(
-        'chromosome',
-        {
-          path,
-          radius: 0.1,
-          cap: BABYLON.Mesh.CAP_ALL
-        },
-        scene
-      )
+//       const pointArray = tubeData.map(
+//         item => new BABYLON.Vector3(item[3], item[4], item[5])
+//       )
+//       console.log(pointArray.length)
+//       const catmullRom = BABYLON.Curve3.CreateCatmullRomSpline(
+//         pointArray,
+//         6,
+//         false
+//       )
+//       const path = catmullRom.getPoints()
+//       console.log(path.length)
+//       const chromosome = BABYLON.TubeBuilder.CreateTube(
+//         'chromosome',
+//         {
+//           path,
+//           radius: 0.1,
+//           cap: BABYLON.Mesh.CAP_ALL
+//         },
+//         scene
+//       )
 
-      const material = new BABYLON.StandardMaterial('material', scene)
-      material.diffuseColor = new BABYLON.Color3.FromHexString(
-        palette[datIndex + keyIndex]
-      )
-      chromosome.material = material
-    })
-  })
+//       const material = new BABYLON.StandardMaterial('material', scene)
+//       material.diffuseColor = new BABYLON.Color3.FromHexString(
+//         palette[datIndex + keyIndex]
+//       )
+//       chromosome.material = material
+//     })
+//   })
 
-  // chromosome.subdivide(pointArray.length)
-  // // console.log(chromosome.subMeshes, chromosome.subdivide(pointArray.length));
+//   // chromosome.subdivide(pointArray.length)
+//   // // console.log(chromosome.subMeshes, chromosome.subdivide(pointArray.length));
 
-  // const chromosomeSegments = deconstructMesh(chromosome)
+//   // const chromosomeSegments = deconstructMesh(chromosome)
 
-  // /**
-  //  * Color non-duplication relies on knowing colors of all the segments
-  //  * @type {MeshColorPair[]}
-  //  */
-  // const returnSegments = []
+//   // /**
+//   //  * Color non-duplication relies on knowing colors of all the segments
+//   //  * @type {MeshColorPair[]}
+//   //  */
+//   // const returnSegments = []
 
-  // chromosomeSegments.forEach((mesh, index) => {
-  //   let color, rand
-  //   rand = Math.random()
-  //   if (rand < 0.25) {
-  //     color = new BABYLON.Color4(1, 1, 1, 0.7)
-  //   } else if (rand >= 0.25 && rand < 0.5) {
-  //     color = new BABYLON.Color4(1, 0, 0, 1)
-  //   } else if (rand >= 0.5 && rand < 0.75) {
-  //     color = new BABYLON.Color4(0, 1, 0, 1)
-  //   } else {
-  //     color = new BABYLON.Color4(1, 1, 0, 1)
-  //   }
+//   // chromosomeSegments.forEach((mesh, index) => {
+//   //   let color, rand
+//   //   rand = Math.random()
+//   //   if (rand < 0.25) {
+//   //     color = new BABYLON.Color4(1, 1, 1, 0.7)
+//   //   } else if (rand >= 0.25 && rand < 0.5) {
+//   //     color = new BABYLON.Color4(1, 0, 0, 1)
+//   //   } else if (rand >= 0.5 && rand < 0.75) {
+//   //     color = new BABYLON.Color4(0, 1, 0, 1)
+//   //   } else {
+//   //     color = new BABYLON.Color4(1, 1, 0, 1)
+//   //   }
 
-  //   const materialColor = new BABYLON.StandardMaterial('materialcolor', scene)
-  //   materialColor.diffuseColor = color
-  //   materialColor.computeHighLevel = true
-  //   mesh.material = materialColor
-  //   returnSegments.push({
-  //     segment: mesh,
-  //     color: color,
-  //     vector: pointArray[index]
-  //   })
-  // })
+//   //   const materialColor = new BABYLON.StandardMaterial('materialcolor', scene)
+//   //   materialColor.diffuseColor = color
+//   //   materialColor.computeHighLevel = true
+//   //   mesh.material = materialColor
+//   //   returnSegments.push({
+//   //     segment: mesh,
+//   //     color: color,
+//   //     vector: pointArray[index]
+//   //   })
+//   // })
 
-  // chromosome.dispose()
+//   // chromosome.dispose()
 
-  // return returnSegments
-}
+//   // return returnSegments
+// }
 
 export function renderTube(data, scene) {
   console.log('render tube...')
@@ -133,16 +136,17 @@ export function renderTube(data, scene) {
     Object.keys(formatted).forEach((key, keyIndex) => {
       const tubeData = formatted[key]
 
-      const pointArray = tubeData.map(
+      const points = tubeData.map(
         item => new THREE.Vector3(item[3], item[4], item[5])
       )
-      console.log(pointArray.length)
-      const catmullRom = new THREE.CatmullRomCurve3(pointArray)
-      const points = catmullRom.getPoints(500)
       console.log(points.length)
-      const geometry = new THREE.BufferGeometry().setFromPoints(points)
+      const spline = new THREE.CatmullRomCurve3(points)
+      const points2 = spline.getPoints(5000)
+      console.log(points.length)
+      const geometry = new THREE.BufferGeometry().setFromPoints(points2)
       const material = new THREE.LineBasicMaterial({
-        color: palette[datIndex + keyIndex]
+        color: palette[datIndex + keyIndex],
+        linewidth: 4 // not working
       })
       // Create the final object to add to the scene
       const curveObject = new THREE.Line(geometry, material)

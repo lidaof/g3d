@@ -1,6 +1,7 @@
 <template>
   <div id="parentContainer">
     <div id="stats" ref="statsContainer"></div>
+    <div id="gui-container" ref="guiContainer"></div>
     <div id="canvasContainer" ref="canvasContainer"></div>
   </div>
 </template>
@@ -38,7 +39,8 @@ export default {
       this.stats.showPanel(0)
       this.stats.dom.style.position = 'absolute'
       this.$refs.statsContainer.appendChild(this.stats.dom)
-      this.gui = new dat.GUI()
+      this.gui = new dat.GUI({ autoPlace: false })
+      this.$refs.guiContainer.appendChild(this.gui.domElement)
 
       this.createCamera()
       this.createControls()
@@ -52,13 +54,13 @@ export default {
     },
     createCamera() {
       this.camera = new THREE.PerspectiveCamera(
-        35, // FOV
+        75, // FOV
         this.container.clientWidth / this.container.clientHeight, // aspect
         0.1, // near clipping plane
-        100 // far clipping plane
+        1000 // far clipping plane
       )
 
-      this.camera.position.set(-4, 4, 10)
+      this.camera.position.set(0, 10, 120)
     },
     createControls() {
       this.controls = new OrbitControls(this.camera, this.container)
@@ -67,7 +69,7 @@ export default {
       const ambientLight = new THREE.HemisphereLight(
         0xddeeff, // sky color
         0x202020, // ground color
-        5 // intensity
+        8 // intensity
       )
 
       const mainLight = new THREE.DirectionalLight(0xffffff, 5)
@@ -146,5 +148,10 @@ export default {
   position: absolute;
   left: 0px;
   top: 0px;
+}
+#gui-container {
+  position: absolute;
+  top: 0px;
+  right: 0px;
 }
 </style>

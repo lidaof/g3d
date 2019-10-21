@@ -1,6 +1,9 @@
 <template>
   <div class="home">
-    <Menu />
+    <div>
+      <router-link to="/about">About</router-link>
+      <Menu />
+    </div>
     <Stage />
   </div>
 </template>

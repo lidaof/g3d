@@ -1,16 +1,10 @@
 <template>
   <div id="app">
-    <Nav />
     <router-view />
   </div>
 </template>
 <script>
-import Nav from '@/components/Nav.vue'
-export default {
-  components: {
-    Nav
-  }
-}
+export default {}
 </script>
 <style>
 html,
@@ -28,7 +22,7 @@ body {
 #app {
   color: #2c3e50;
   display: grid;
-  grid-template-rows: 60px 1fr;
+  grid-template-rows: 1fr;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
