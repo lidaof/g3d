@@ -12,7 +12,6 @@ import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
-
 import { renderTube } from '@/components/Tube'
 export default {
   name: 'ThreeScene',
@@ -25,10 +24,10 @@ export default {
       renderer: null,
       controls: null,
       stats: null,
-      gui: null
+      gui: null,
+      drawParam: { shapeType: 'line', lineWidth: 1 }
     }
   },
-
   computed: mapState(['g3d', 'data3d']),
   methods: {
     init() {
@@ -39,8 +38,6 @@ export default {
       this.stats.showPanel(0)
       this.stats.dom.style.position = 'absolute'
       this.$refs.statsContainer.appendChild(this.stats.dom)
-      this.gui = new dat.GUI({ autoPlace: false })
-      this.$refs.guiContainer.appendChild(this.gui.domElement)
 
       this.createCamera()
       this.createControls()
@@ -92,6 +89,28 @@ export default {
       //   this.renderer.physicallyCorrectLights = true;
 
       this.container.appendChild(this.renderer.domElement)
+      this.initGui()
+    },
+    initGui() {
+      this.gui = new dat.GUI({ autoPlace: false })
+      this.$refs.guiContainer.appendChild(this.gui.domElement)
+      const param = {
+        'shape type': 0,
+        'line width': 1
+      }
+      this.gui.add(param, 'shape type', { Line: 0, Tube: 1 }).onChange(val => {
+        switch (val) {
+          case '0':
+            this.drawParam.shapeType = 'line'
+            break
+          case '1':
+            this.drawParam.shapeType = 'tube'
+            break
+        }
+      })
+      this.gui.add(param, 'line width', 1, 10).onChange(val => {
+        this.drawParam.lineWidth = val
+      })
     },
     update() {
       // Don't delete this function!
@@ -123,7 +142,7 @@ export default {
   watch: {
     data3d(newData, oldData) {
       if (newData !== oldData) {
-        renderTube(newData, this.scene)
+        renderTube(newData, this.scene, this.drawParam)
       }
     }
   },

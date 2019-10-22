@@ -1,5 +1,6 @@
 // import * as BABYLON from 'babylonjs'
 import * as THREE from 'three'
+import { MeshLine, MeshLineMaterial } from 'three.meshline'
 // import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 // import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 // import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
@@ -105,24 +106,12 @@ function reformatData(data) {
 //   // return returnSegments
 // }
 
-export function renderTube(data, scene) {
-  console.log('render tube...')
+export function renderTube(data, scene, param) {
+  console.log('render tube...', param)
   if (!data.length) {
     console.error('error: data for tube is empty')
     return
   }
-  // console.log(data, scene)
-  // // create a geometry
-  // const geometry = new THREE.BoxBufferGeometry(2, 2, 2)
-
-  // // create a purple Standard material
-  // const material = new THREE.MeshStandardMaterial({ color: 0x800080 })
-
-  // // create a Mesh containing the geometry and material
-  // const mesh = new THREE.Mesh(geometry, material)
-
-  // // add the mesh to the scene object
-  // scene.add(mesh)
 
   // axis
   const axes = new THREE.AxesHelper(20)
@@ -143,53 +132,28 @@ export function renderTube(data, scene) {
       const spline = new THREE.CatmullRomCurve3(points)
       const points2 = spline.getPoints(5000)
       console.log(points.length)
-      const geometry = new THREE.BufferGeometry().setFromPoints(points2)
-      const material = new THREE.LineBasicMaterial({
-        color: palette[datIndex + keyIndex],
-        linewidth: 4 // not working
-      })
-      // Create the final object to add to the scene
-      const curveObject = new THREE.Line(geometry, material)
-      scene.add(curveObject)
+      // const geometry = new THREE.BufferGeometry().setFromPoints(points2)
+      // const material = new THREE.LineBasicMaterial({
+      //   color: palette[datIndex + keyIndex],
+      //   linewidth: 4 // not working
+      // })
+      // // Create the final object to add to the scene
+      // const curveObject = new THREE.Line(geometry, material)
+      // scene.add(curveObject)
+      if (param.shapeType === 'line') {
+        const geometry = new THREE.Geometry().setFromPoints(points2)
+        const line = new MeshLine()
+        line.setGeometry(geometry)
+        // line.setGeometry(geometry, function() {
+        //   return 2
+        // })
+        const material = new MeshLineMaterial({
+          color: palette[datIndex + keyIndex],
+          lineWidth: param.lineWidth / 10
+        })
+        const mesh = new THREE.Mesh(line.geometry, material) // this syntax could definitely be improved!
+        scene.add(mesh)
+      }
     })
   })
-
-  // chromosome.subdivide(pointArray.length)
-  // // console.log(chromosome.subMeshes, chromosome.subdivide(pointArray.length));
-
-  // const chromosomeSegments = deconstructMesh(chromosome)
-
-  // /**
-  //  * Color non-duplication relies on knowing colors of all the segments
-  //  * @type {MeshColorPair[]}
-  //  */
-  // const returnSegments = []
-
-  // chromosomeSegments.forEach((mesh, index) => {
-  //   let color, rand
-  //   rand = Math.random()
-  //   if (rand < 0.25) {
-  //     color = new BABYLON.Color4(1, 1, 1, 0.7)
-  //   } else if (rand >= 0.25 && rand < 0.5) {
-  //     color = new BABYLON.Color4(1, 0, 0, 1)
-  //   } else if (rand >= 0.5 && rand < 0.75) {
-  //     color = new BABYLON.Color4(0, 1, 0, 1)
-  //   } else {
-  //     color = new BABYLON.Color4(1, 1, 0, 1)
-  //   }
-
-  //   const materialColor = new BABYLON.StandardMaterial('materialcolor', scene)
-  //   materialColor.diffuseColor = color
-  //   materialColor.computeHighLevel = true
-  //   mesh.material = materialColor
-  //   returnSegments.push({
-  //     segment: mesh,
-  //     color: color,
-  //     vector: pointArray[index]
-  //   })
-  // })
-
-  // chromosome.dispose()
-
-  // return returnSegments
 }
