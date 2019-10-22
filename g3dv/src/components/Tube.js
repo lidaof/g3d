@@ -1,14 +1,12 @@
-// import * as BABYLON from 'babylonjs'
 import * as THREE from 'three'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
-// import { Line2 } from 'three/examples/jsm/lines/Line2.js'
-// import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
-// import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import _ from 'lodash'
 import iwanthue from 'iwanthue'
-// import { deconstructMesh } from '@/helper'
+import { clearScene } from '../helper'
+
 /**
  * this component renders a 3D tube given the data3d array data
+ * @author Daofeng Li
  */
 
 function reformatData(data) {
@@ -21,6 +19,74 @@ function reformatData(data) {
     sorted[key] = sort
   })
   return sorted
+}
+
+function renderTube(spline, scene, param, color) {
+  const geometry = new THREE.TubeBufferGeometry(spline, 2000, 0.5, 8, false)
+  const material = new THREE.MeshBasicMaterial({
+    color
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  scene.add(mesh)
+}
+
+function renderLine(spline, scene, param, color) {
+  const points2 = spline.getPoints(5000)
+  const geometry = new THREE.Geometry().setFromPoints(points2)
+  const line = new MeshLine()
+  line.setGeometry(geometry)
+  // line.setGeometry(geometry, function() {
+  //   return 2
+  // })
+  const material = new MeshLineMaterial({
+    color,
+    lineWidth: param.lineWidth / 10
+  })
+  const mesh = new THREE.Mesh(line.geometry, material) // this syntax could definitely be improved!
+  scene.add(mesh)
+}
+export function renderShape(data, scene, param) {
+  console.log('render tube...', param)
+  if (!data.length) {
+    console.error('error: data for tube is empty')
+    return
+  }
+  // clear old objects on the scene
+  clearScene(scene)
+  // axis
+  const axes = new THREE.AxesHelper(20)
+  scene.add(axes)
+
+  const palette = iwanthue(data.length * 2)
+  data.forEach((dat, datIndex) => {
+    const formatted = reformatData(dat.data)
+
+    Object.keys(formatted).forEach((key, keyIndex) => {
+      const tubeData = formatted[key]
+
+      const points = tubeData.map(
+        item => new THREE.Vector3(item[3], item[4], item[5])
+      )
+      console.log(points.length)
+      const spline = new THREE.CatmullRomCurve3(points)
+
+      // const geometry = new THREE.BufferGeometry().setFromPoints(points2)
+      // const material = new THREE.LineBasicMaterial({
+      //   color: palette[datIndex + keyIndex],
+      //   linewidth: 4 // not working
+      // })
+      // // Create the final object to add to the scene
+      // const curveObject = new THREE.Line(geometry, material)
+      // scene.add(curveObject)
+      if (param.shapeType === 'line') {
+        // line
+        renderLine(spline, scene, param, palette[datIndex + keyIndex])
+      } else {
+        // tube
+        renderTube(spline, scene, param, palette[datIndex + keyIndex])
+      }
+    })
+  })
 }
 
 // export function renderTubeToScene(data, scene) {
@@ -105,55 +171,3 @@ function reformatData(data) {
 
 //   // return returnSegments
 // }
-
-export function renderTube(data, scene, param) {
-  console.log('render tube...', param)
-  if (!data.length) {
-    console.error('error: data for tube is empty')
-    return
-  }
-
-  // axis
-  const axes = new THREE.AxesHelper(20)
-  scene.add(axes)
-
-  const palette = iwanthue(data.length * 2)
-  console.log(palette)
-  data.forEach((dat, datIndex) => {
-    const formatted = reformatData(dat.data)
-
-    Object.keys(formatted).forEach((key, keyIndex) => {
-      const tubeData = formatted[key]
-
-      const points = tubeData.map(
-        item => new THREE.Vector3(item[3], item[4], item[5])
-      )
-      console.log(points.length)
-      const spline = new THREE.CatmullRomCurve3(points)
-      const points2 = spline.getPoints(5000)
-      console.log(points.length)
-      // const geometry = new THREE.BufferGeometry().setFromPoints(points2)
-      // const material = new THREE.LineBasicMaterial({
-      //   color: palette[datIndex + keyIndex],
-      //   linewidth: 4 // not working
-      // })
-      // // Create the final object to add to the scene
-      // const curveObject = new THREE.Line(geometry, material)
-      // scene.add(curveObject)
-      if (param.shapeType === 'line') {
-        const geometry = new THREE.Geometry().setFromPoints(points2)
-        const line = new MeshLine()
-        line.setGeometry(geometry)
-        // line.setGeometry(geometry, function() {
-        //   return 2
-        // })
-        const material = new MeshLineMaterial({
-          color: palette[datIndex + keyIndex],
-          lineWidth: param.lineWidth / 10
-        })
-        const mesh = new THREE.Mesh(line.geometry, material) // this syntax could definitely be improved!
-        scene.add(mesh)
-      }
-    })
-  })
-}

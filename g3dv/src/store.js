@@ -56,6 +56,7 @@ export default new Vuex.Store({
         commit('SET_STATE_ERROR_MSG', parsedRegion.error)
         return
       }
+      commit('SET_STATE_ERROR_MSG', null)
       commit('SET_LOADING_STATUS')
       let data
       switch (regionControl) {

@@ -2,7 +2,12 @@
   <form @submit.prevent="handleSubmit">
     <div class="field">
       <label>Input a G3D file URL</label>
-      <input type="text" v-model="g3d.url" placeholder="G3D file url" size="40" />
+      <input
+        type="text"
+        v-model="g3d.url"
+        placeholder="G3D file url"
+        size="40"
+      />
     </div>
     <div class="field">
       <label>Genome assembly</label>
@@ -13,29 +18,51 @@
     <div class="field">
       <label>Select a resolution</label>
       <select v-model="g3d.resolution">
-        <option v-for="res in resolutions" :key="res" :value="res">{{ prettyRes(res) }}</option>
+        <option v-for="res in resolutions" :key="res" :value="res">
+          {{ prettyRes(res) }}
+        </option>
       </select>
     </div>
     <div class="field">
       <label>Select a gene or region</label>
       <br />
-      <input type="text" v-model="g3d.region" size="40" placeholder="gene symbol or region" />
+      <input
+        type="text"
+        v-model="g3d.region"
+        size="40"
+        placeholder="gene symbol or region"
+      />
     </div>
     <div class="field">
       <label>Choose display region</label>
       <br />
       <label>
-        <input type="radio" name="region" v-model="g3d.regionControl" value="region" />
+        <input
+          type="radio"
+          name="region"
+          v-model="g3d.regionControl"
+          value="region"
+        />
         Input region
       </label>
       <br />
       <label>
-        <input type="radio" name="region" v-model="g3d.regionControl" value="chrom" />
+        <input
+          type="radio"
+          name="region"
+          v-model="g3d.regionControl"
+          value="chrom"
+        />
         Whole Chromosome
       </label>
       <br />
       <label>
-        <input type="radio" name="region" v-model="g3d.regionControl" value="genome" />
+        <input
+          type="radio"
+          name="region"
+          v-model="g3d.regionControl"
+          value="genome"
+        />
         Whole Genome
       </label>
     </div>
@@ -82,6 +109,7 @@ export default {
         this.error = 'Please submit a URL'
         return
       }
+      this.error = null
       this.$store.dispatch('setG3d', this.g3d)
       const gf = new G3dFile({ url: this.g3d.url })
       this.$store.dispatch('setG3dFile', gf)

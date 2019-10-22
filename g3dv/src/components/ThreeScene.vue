@@ -7,12 +7,14 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import { mapState } from 'vuex'
 import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
-import { renderTube } from '@/components/Tube'
+import { renderShape } from '@/components/Tube'
+
 export default {
   name: 'ThreeScene',
   data() {
@@ -101,15 +103,18 @@ export default {
       this.gui.add(param, 'shape type', { Line: 0, Tube: 1 }).onChange(val => {
         switch (val) {
           case '0':
-            this.drawParam.shapeType = 'line'
+            // this.drawParam.shapeType = 'line'
+            Vue.set(this.drawParam, 'shapeType', 'line')
             break
           case '1':
-            this.drawParam.shapeType = 'tube'
+            // this.drawParam.shapeType = 'tube'
+            Vue.set(this.drawParam, 'shapeType', 'tube')
             break
         }
       })
       this.gui.add(param, 'line width', 1, 10).onChange(val => {
-        this.drawParam.lineWidth = val
+        // this.drawParam.lineWidth = val
+        Vue.set(this.drawParam, 'lineWidth', val)
       })
     },
     update() {
@@ -142,8 +147,14 @@ export default {
   watch: {
     data3d(newData, oldData) {
       if (newData !== oldData) {
-        renderTube(newData, this.scene, this.drawParam)
+        renderShape(newData, this.scene, this.drawParam)
       }
+    },
+    drawParam: {
+      handler(newParam) {
+        console.log(newParam)
+      },
+      deep: true
     }
   },
   beforeDestroy() {
