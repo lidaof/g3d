@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { MeshLine, MeshLineMaterial } from 'three.meshline'
 import _ from 'lodash'
 import iwanthue from 'iwanthue'
@@ -19,6 +20,49 @@ function reformatData(data) {
     sorted[key] = sort
   })
   return sorted
+}
+
+export function getSplines(data) {
+  console.log('preparing splines...')
+  if (!data.length) {
+    console.error('error: data for splines is empty')
+    return
+  }
+  const splines = {}
+  const palette = iwanthue(data.length * 2)
+  data.forEach((dat, datIndex) => {
+    const formatted = reformatData(dat.data)
+
+    Object.keys(formatted).forEach((key, keyIndex) => {
+      const tubeData = formatted[key]
+
+      const points = tubeData.map(
+        item => new THREE.Vector3(item[3], item[4], item[5])
+      )
+      console.log(points.length)
+      const spline = new THREE.CatmullRomCurve3(points)
+      const color = palette[datIndex + keyIndex]
+      splines[`${dat.region}_${key}`] = { spline, color }
+    })
+  })
+  return splines
+}
+
+function renderBall(spline, scene, param, color) {
+  const points2 = spline.getPoints(500)
+  const geometry = new THREE.SphereBufferGeometry(0.5, 16, 16)
+  const material = new THREE.MeshBasicMaterial({
+    color
+  })
+  const geoms = []
+  points2.forEach(point => {
+    const geom = geometry.clone()
+    geom.translate(point.x, point.y, point.z)
+    geoms.push(geom)
+  })
+  const mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geoms)
+  const mesh = new THREE.Mesh(mergedGeometry, material)
+  scene.add(mesh)
 }
 
 function renderTube(spline, scene, param, color) {
@@ -78,12 +122,26 @@ export function renderShape(data, scene, param) {
       // // Create the final object to add to the scene
       // const curveObject = new THREE.Line(geometry, material)
       // scene.add(curveObject)
-      if (param.shapeType === 'line') {
-        // line
-        renderLine(spline, scene, param, palette[datIndex + keyIndex])
-      } else {
-        // tube
-        renderTube(spline, scene, param, palette[datIndex + keyIndex])
+      // if (param.shapeType === 'line') {
+      //   // line
+      //   renderLine(spline, scene, param, palette[datIndex + keyIndex])
+      // } else {
+      //   // tube
+      //   renderTube(spline, scene, param, palette[datIndex + keyIndex])
+      // }
+
+      switch (param.shapeType) {
+        case 'line':
+          renderLine(spline, scene, param, palette[datIndex + keyIndex])
+          break
+        case 'tube':
+          renderTube(spline, scene, param, palette[datIndex + keyIndex])
+          break
+        case 'ball':
+          renderBall(spline, scene, param, palette[datIndex + keyIndex])
+          break
+        default:
+          break
       }
     })
   })

@@ -13,7 +13,7 @@ import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
-import { renderShape } from '@/components/Tube'
+import { getSplines } from '@/components/Tube'
 
 export default {
   name: 'ThreeScene',
@@ -27,7 +27,8 @@ export default {
       controls: null,
       stats: null,
       gui: null,
-      drawParam: { shapeType: 'line', lineWidth: 1 }
+      drawParam: { shapeType: 'line', lineWidth: 1 },
+      splines: null // key, chr or region, mat or pat, value, {spine: spline object in Three, color: color}
     }
   },
   computed: mapState(['g3d', 'data3d']),
@@ -100,18 +101,22 @@ export default {
         'shape type': 0,
         'line width': 1
       }
-      this.gui.add(param, 'shape type', { Line: 0, Tube: 1 }).onChange(val => {
-        switch (val) {
-          case '0':
-            // this.drawParam.shapeType = 'line'
-            Vue.set(this.drawParam, 'shapeType', 'line')
-            break
-          case '1':
-            // this.drawParam.shapeType = 'tube'
-            Vue.set(this.drawParam, 'shapeType', 'tube')
-            break
-        }
-      })
+      this.gui
+        .add(param, 'shape type', { Line: 0, Tube: 1, Ball: 2 })
+        .onChange(val => {
+          switch (val) {
+            case '0':
+              // this.drawParam.shapeType = 'line'
+              Vue.set(this.drawParam, 'shapeType', 'line')
+              break
+            case '1':
+              Vue.set(this.drawParam, 'shapeType', 'tube')
+              break
+            case '2':
+              Vue.set(this.drawParam, 'shapeType', 'ball')
+              break
+          }
+        })
       this.gui.add(param, 'line width', 1, 10).onChange(val => {
         // this.drawParam.lineWidth = val
         Vue.set(this.drawParam, 'lineWidth', val)
@@ -138,6 +143,35 @@ export default {
         this.container.clientWidth,
         this.container.clientHeight
       )
+    },
+    addTubes() {
+      switch (this.drawParam.shapeType) {
+        case 'line':
+          this.renderLine()
+          break
+        case 'tube':
+          this.renderTube()
+          break
+        case 'ball':
+          this.renderBall()
+          break
+        default:
+          break
+      }
+    },
+    renderTube(splineContainer) {
+      const geometry = new THREE.TubeBufferGeometry(
+        this.spline,
+        2000,
+        0.5,
+        8,
+        false
+      )
+      const material = new THREE.MeshBasicMaterial({
+        color
+      })
+      const mesh = new THREE.Mesh(geometry, material)
+      scene.add(mesh)
     }
   },
   mounted() {
@@ -147,15 +181,16 @@ export default {
   watch: {
     data3d(newData, oldData) {
       if (newData !== oldData) {
-        renderShape(newData, this.scene, this.drawParam)
+        // renderShape(newData, this.scene, this.drawParam)
+        this.splines = getSplines(newData)
       }
-    },
-    drawParam: {
-      handler(newParam) {
-        console.log(newParam)
-      },
-      deep: true
     }
+    // drawParam: {
+    //   handler(newParam) {
+    //     console.log(newParam)
+    //   },
+    //   deep: true
+    // }
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize)
