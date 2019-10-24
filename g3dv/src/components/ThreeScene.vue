@@ -7,13 +7,16 @@
 </template>
 
 <script>
-import Vue from 'vue'
+// import Vue from 'vue'
 import { mapState } from 'vuex'
 import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
+import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { MeshLine, MeshLineMaterial } from 'three.meshline'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
 import { getSplines } from '@/components/Tube'
+import { clearScene } from '@/helper'
 
 export default {
   name: 'ThreeScene',
@@ -27,7 +30,6 @@ export default {
       controls: null,
       stats: null,
       gui: null,
-      drawParam: { shapeType: 'line', lineWidth: 1 },
       splines: null // key, chr or region, mat or pat, value, {spine: spline object in Three, color: color}
     }
   },
@@ -37,6 +39,8 @@ export default {
       this.container = this.$refs.canvasContainer
       this.scene = new THREE.Scene()
       //   this.scene.background = new THREE.Color(0x8fbcd4)
+      const axes = new THREE.AxesHelper(50)
+      this.scene.add(axes)
       this.stats = new Stats()
       this.stats.showPanel(0)
       this.stats.dom.style.position = 'absolute'
@@ -85,42 +89,32 @@ export default {
       )
 
       this.renderer.setPixelRatio(window.devicePixelRatio)
-
-      //   this.renderer.gammaFactor = 2.2;
-      //   this.renderer.gammaOutput = true;
-
-      //   this.renderer.physicallyCorrectLights = true;
-
       this.container.appendChild(this.renderer.domElement)
-      this.initGui()
     },
-    initGui() {
+    updateGui() {
+      if (this.gui) {
+        this.$refs.guiContainer.removeChild(this.gui.domElement)
+        this.gui.destroy()
+      }
       this.gui = new dat.GUI({ autoPlace: false })
       this.$refs.guiContainer.appendChild(this.gui.domElement)
-      const param = {
-        'shape type': 0,
+      const chroms = Object.keys(this.splines)
+      const params = {
+        region: chroms[0],
+        shape: 'line',
         'line width': 1
       }
-      this.gui
-        .add(param, 'shape type', { Line: 0, Tube: 1, Ball: 2 })
-        .onChange(val => {
-          switch (val) {
-            case '0':
-              // this.drawParam.shapeType = 'line'
-              Vue.set(this.drawParam, 'shapeType', 'line')
-              break
-            case '1':
-              Vue.set(this.drawParam, 'shapeType', 'tube')
-              break
-            case '2':
-              Vue.set(this.drawParam, 'shapeType', 'ball')
-              break
-          }
-        })
-      this.gui.add(param, 'line width', 1, 10).onChange(val => {
-        // this.drawParam.lineWidth = val
-        Vue.set(this.drawParam, 'lineWidth', val)
+      const folderGeometry = this.gui.addFolder('Regions')
+      folderGeometry.add(params, 'region', chroms).onChange(() => {
+        this.addShapes(params)
       })
+      this.gui
+        .add(params, 'shape', { Line: 'line', Tube: 'tube', Ball: 'ball' })
+        .onChange(() => this.addShapes(params))
+      const lineControls = this.gui.addFolder('Line Controls')
+      lineControls
+        .add(params, 'line width', 1, 10)
+        .onChange(() => this.addShapes(params))
     },
     update() {
       // Don't delete this function!
@@ -144,34 +138,63 @@ export default {
         this.container.clientHeight
       )
     },
-    addTubes() {
-      switch (this.drawParam.shapeType) {
+    addShapes(params) {
+      clearScene(this.scene)
+      const { region, shape } = params
+      const extrudePath = this.splines[region].spline
+      const color = this.splines[region].color
+      switch (shape) {
         case 'line':
-          this.renderLine()
+          this.renderLine(extrudePath, params)
           break
         case 'tube':
-          this.renderTube()
+          this.renderTube(extrudePath, color)
           break
         case 'ball':
-          this.renderBall()
+          this.renderBall(extrudePath, color)
           break
         default:
           break
       }
     },
-    renderTube(splineContainer) {
-      const geometry = new THREE.TubeBufferGeometry(
-        this.spline,
-        2000,
-        0.5,
-        8,
-        false
-      )
+    renderTube(path, color) {
+      const geometry = new THREE.TubeBufferGeometry(path, 2000, 0.5, 8, false)
       const material = new THREE.MeshBasicMaterial({
         color
       })
       const mesh = new THREE.Mesh(geometry, material)
-      scene.add(mesh)
+      this.scene.add(mesh)
+    },
+    renderLine(path, params) {
+      const points = path.getPoints(5000)
+      const geometry = new THREE.Geometry().setFromPoints(points)
+      const line = new MeshLine()
+      line.setGeometry(geometry)
+      // line.setGeometry(geometry, function() {
+      //   return 2
+      // })
+      const material = new MeshLineMaterial({
+        color: this.splines[params.region].color,
+        lineWidth: params['line width'] / 10
+      })
+      const mesh = new THREE.Mesh(line.geometry, material) // this syntax could definitely be improved!
+      this.scene.add(mesh)
+    },
+    renderBall(path, color) {
+      const points = path.getPoints(500)
+      const geometry = new THREE.SphereBufferGeometry(0.5, 16, 16)
+      const material = new THREE.MeshBasicMaterial({
+        color
+      })
+      const geoms = []
+      points.forEach(point => {
+        const geom = geometry.clone()
+        geom.translate(point.x, point.y, point.z)
+        geoms.push(geom)
+      })
+      const mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geoms)
+      const mesh = new THREE.Mesh(mergedGeometry, material)
+      this.scene.add(mesh)
     }
   },
   mounted() {
@@ -183,6 +206,7 @@ export default {
       if (newData !== oldData) {
         // renderShape(newData, this.scene, this.drawParam)
         this.splines = getSplines(newData)
+        this.updateGui()
       }
     }
     // drawParam: {
