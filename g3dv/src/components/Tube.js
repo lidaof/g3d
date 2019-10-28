@@ -48,47 +48,50 @@ export function getSplines(data) {
   return splines
 }
 
-function renderBall(spline, scene, param, color) {
-  const points2 = spline.getPoints(500)
+export function getBallMesh(spline, param, chrom) {
+  const points = spline.getPoints(500)
   const geometry = new THREE.SphereBufferGeometry(0.5, 16, 16)
-  const material = new THREE.MeshBasicMaterial({
-    color
-  })
+  const colorKey = `color_${chrom}`
+  const color = param[colorKey]
+  const material = new THREE.MeshBasicMaterial({ color })
   const geoms = []
-  points2.forEach(point => {
+  points.forEach(point => {
     const geom = geometry.clone()
     geom.translate(point.x, point.y, point.z)
     geoms.push(geom)
   })
   const mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geoms)
   const mesh = new THREE.Mesh(mergedGeometry, material)
-  scene.add(mesh)
+  return mesh
 }
 
-function renderTube(spline, scene, param, color) {
+export function getTubeMesh(spline, param, chrom) {
   const geometry = new THREE.TubeBufferGeometry(spline, 2000, 0.5, 8, false)
-  const material = new THREE.MeshBasicMaterial({
-    color
-  })
+  const colorKey = `color_${chrom}`
+  const color = param[colorKey]
+  const material = new THREE.MeshBasicMaterial({ color })
   const mesh = new THREE.Mesh(geometry, material)
-  scene.add(mesh)
+  return mesh
 }
 
-function renderLine(spline, scene, param, color) {
-  const points2 = spline.getPoints(5000)
-  const geometry = new THREE.Geometry().setFromPoints(points2)
+export function getLineMesh(spline, param, chrom) {
+  const points = spline.getPoints(5000)
+  const geometry = new THREE.Geometry().setFromPoints(points)
   const line = new MeshLine()
   line.setGeometry(geometry)
   // line.setGeometry(geometry, function() {
   //   return 2
   // })
+  const colorKey = `color_${chrom}`
+  const color = param[colorKey]
   const material = new MeshLineMaterial({
     color,
     lineWidth: param.lineWidth / 10
   })
   const mesh = new THREE.Mesh(line.geometry, material) // this syntax could definitely be improved!
-  scene.add(mesh)
+  return mesh
 }
+
 export function renderShape(data, scene, param) {
   console.log('render tube...', param)
   if (!data.length) {
@@ -132,13 +135,13 @@ export function renderShape(data, scene, param) {
 
       switch (param.shapeType) {
         case 'line':
-          renderLine(spline, scene, param, palette[datIndex + keyIndex])
+          getLineMesh(spline, scene, param, palette[datIndex + keyIndex])
           break
         case 'tube':
-          renderTube(spline, scene, param, palette[datIndex + keyIndex])
+          getTubeMesh(spline, scene, param, palette[datIndex + keyIndex])
           break
         case 'ball':
-          renderBall(spline, scene, param, palette[datIndex + keyIndex])
+          getBallMesh(spline, scene, param, palette[datIndex + keyIndex])
           break
         default:
           break

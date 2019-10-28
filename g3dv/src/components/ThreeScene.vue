@@ -11,11 +11,14 @@
 import { mapState } from 'vuex'
 import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
-import { BufferGeometryUtils } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { MeshLine, MeshLineMaterial } from 'three.meshline'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
-import { getSplines } from '@/components/Tube'
+import {
+  getSplines,
+  getBallMesh,
+  getTubeMesh,
+  getLineMesh
+} from '@/components/Tube'
 // import { clearScene } from '@/helper'
 
 export default {
@@ -32,6 +35,7 @@ export default {
       gui: null,
       splines: null, // key, chr or region, mat or pat, value, {spine: spline object in Three, color: color}
       mesh: null, //single model mode
+      meshes: {}, // all models mode, key: region, value: Mesh obj
       binormal: new THREE.Vector3(),
       normal: new THREE.Vector3(),
       parent: null,
@@ -42,13 +46,17 @@ export default {
       meshMaterial: null,
       params: {
         region: '',
-        shape: 'tube',
+        shape: 'line',
         lineWidth: 1,
         color: '',
         animationView: false,
         lookAhead: false,
         cameraHelper: false,
-        scale: 1
+        scale: 1,
+        speed: 1,
+        sceneColor: 0x00000,
+        screenshot: null,
+        showAll: false
       }
     }
   },
@@ -88,7 +96,7 @@ export default {
         10000 // far clipping plane
       )
 
-      this.camera.position.set(0, 50, 500)
+      this.camera.position.set(0, 50, 200)
 
       this.splineCamera = new THREE.PerspectiveCamera(
         84,
@@ -143,39 +151,93 @@ export default {
       this.gui = new dat.GUI({ autoPlace: false })
       this.$refs.guiContainer.appendChild(this.gui.domElement)
       const chroms = Object.keys(this.splines)
-      this.params.region = chroms[0]
 
-      this.params.color = this.meshMaterial.color.getStyle()
-
-      const folderGeometry = this.gui.addFolder('Regions')
-      folderGeometry.add(this.params, 'region', chroms).onChange(() => {
-        this.addShapes(this.params)
-      })
-      folderGeometry.open()
       this.gui
-        .add(this.params, 'shape', { Line: 'line', Tube: 'tube', Ball: 'ball' })
-        .onChange(() => this.addShapes(this.params))
-      this.gui
-        .addColor(this.params, 'color')
+        .addColor(this.params, 'sceneColor')
+        .name('Background')
         .listen()
-        .onChange(e => this.meshMaterial.color.setStyle(e))
-      this.gui.add(this.params, 'scale', 1, 10).onChange(() => this.setScale())
-      const lineControls = this.gui.addFolder('Line Controls')
-      lineControls
-        .add(this.params, 'lineWidth', 1, 10)
-        .onChange(() => this.addShapes(this.params))
+        .onChange(e => (this.scene.background = new THREE.Color(e)))
+      this.gui
+        .add(this.params, 'showAll')
+        .name('Show all')
+        .onChange(() => this.toggleAllMode())
+      const folderGeometry = this.gui.addFolder('Regions')
+      if (this.params.showAll) {
+        Object.keys(this.splines).forEach(chrom => {
+          const colorKey = `color_${chrom}`
+          folderGeometry
+            .addColor(this.params, colorKey)
+            .listen()
+            .name(chrom)
+            .onChange(e => {
+              if (this.meshes[chrom]) {
+                this.meshes[chrom].material.color.setStyle(e)
+              }
+            })
+        })
+        this.gui
+          .add(this.params, 'shape', {
+            Line: 'line',
+            Tube: 'tube',
+            Ball: 'ball'
+          })
+          .name('Shape')
+          .onChange(() => this.addAllShapes(this.params))
+        const lineControls = this.gui.addFolder('Line Controls')
+        lineControls
+          .add(this.params, 'lineWidth', 1, 10)
+          .onChange(() => this.addAllShapes(this.params))
+      } else {
+        this.params.color = this.meshMaterial.color.getStyle()
 
-      const folderCamera = this.gui.addFolder('Camera')
-      folderCamera.add(this.params, 'animationView').onChange(() => {
-        this.animateCamera()
-      })
-      folderCamera.add(this.params, 'lookAhead').onChange(() => {
-        this.animateCamera()
-      })
-      folderCamera
-        .add(this.params, 'cameraHelper')
-        .onChange(() => this.animateCamera())
-      folderCamera.open()
+        folderGeometry.add(this.params, 'region', chroms).onChange(() => {
+          this.addShapes(this.params)
+        })
+        folderGeometry.open()
+
+        this.gui
+          .addColor(this.params, 'color')
+          .listen()
+          .onChange(e => this.meshMaterial.color.setStyle(e))
+        this.gui
+          .add(this.params, 'scale', 1, 10)
+          .onChange(() => this.setScale())
+
+        const folderCamera = this.gui.addFolder('Camera')
+        folderCamera
+          .add(this.params, 'animationView')
+          .name('Walk mode')
+          .onChange(() => {
+            this.animateCamera()
+          })
+        folderCamera
+          .add(this.params, 'lookAhead')
+          .name('Look ahead')
+          .onChange(() => {
+            this.animateCamera()
+          })
+        // folderCamera
+        //   .add(this.params, 'cameraHelper')
+        //   .onChange(() => this.animateCamera())
+        folderCamera.add(this.params, 'speed', {
+          Slow: 1,
+          Medium: 10,
+          Fast: 100
+        })
+        folderCamera.open()
+      }
+
+      // screenshot function
+      this.params.screenshot = () => {
+        this.render()
+        this.renderer.domElement.toBlob(blob =>
+          this.saveBlob(
+            blob,
+            `g3dv-screencapture-${new Date().toISOString()}.png`
+          )
+        )
+      }
+      this.gui.add(this.params, 'screenshot').name('📷Screenshot')
     },
     setScale() {
       this.mesh.scale.set(
@@ -199,12 +261,11 @@ export default {
       }
 
       const time = Date.now()
-      const looptime = 20 * 100000
+      const looptime = (20 * 100000) / this.params.speed
       const t = (time % looptime) / looptime
 
       const pos = this.meshGeometry.parameters.path.getPointAt(t)
       pos.multiplyScalar(this.params.scale)
-      // console.log(pos)
       // interpolation
 
       const segments = this.meshGeometry.tangents.length
@@ -219,29 +280,21 @@ export default {
       this.binormal
         .multiplyScalar(pickt - pick)
         .add(this.meshGeometry.binormals[pick])
-
       const dir = this.meshGeometry.parameters.path.getTangentAt(t)
       const offset = 1
-
       this.normal.copy(this.binormal).cross(dir)
-
       // we move on a offset on its binormal
-
       pos.add(this.normal.clone().multiplyScalar(offset))
       // console.log(pos)
       this.splineCamera.position.copy(pos)
       this.cameraEye.position.copy(pos)
-
       // using arclength for stablization in look ahead
-
       const lookAt = this.meshGeometry.parameters.path
         .getPointAt(
           (t + 30 / this.meshGeometry.parameters.path.getLength()) % 1
         )
         .multiplyScalar(this.params.scale)
-
       // camera orientation 2 - up orientation via normal
-
       if (!this.params.lookAhead) lookAt.copy(pos).add(dir)
       this.splineCamera.matrix.lookAt(
         this.splineCamera.position,
@@ -251,14 +304,11 @@ export default {
       this.splineCamera.quaternion.setFromRotationMatrix(
         this.splineCamera.matrix
       )
-
       this.cameraHelper.update()
-
       this.renderer.render(
         this.scene,
         this.params.animationView ? this.splineCamera : this.camera
       )
-
       this.stats.end()
     },
     onWindowResize() {
@@ -275,40 +325,46 @@ export default {
         this.container.clientHeight
       )
     },
+    toggleAllMode() {
+      if (this.params.showAll) {
+        this.clearSingleMesh()
+        this.addAllShapes(this.params)
+        this.updateGui()
+      } else {
+        this.clearAllMeshes()
+        this.addShapes(this.params)
+        this.updateGui()
+      }
+    },
+    addAllShapes(params) {
+      this.clearAllMeshes()
+      Object.keys(this.splines).forEach(chrom => {
+        const { spline } = this.splines[chrom]
+        let mesh
+        switch (params.shape) {
+          case 'line':
+            mesh = getLineMesh(spline, params, chrom)
+            break
+          case 'tube':
+            mesh = getTubeMesh(spline, params, chrom)
+            break
+          case 'ball':
+            mesh = getBallMesh(spline, params, chrom)
+            break
+          default:
+            break
+        }
+        this.scene.add(mesh)
+        this.meshes[chrom] = mesh
+      })
+    },
     addShapes(params) {
       // clearScene(this.scene)
-      if (this.mesh) {
-        this.parent.remove(this.mesh)
-        this.mesh.geometry.dispose()
-        if (this.mesh.material.isMaterial) {
-          this.mesh.material.dispose()
-        } else {
-          for (const material of this.mesh.material) {
-            material.dispose()
-          }
-        }
-      }
-      const { region, shape } = params
+      this.clearSingleMesh()
+      const { region } = params
       const extrudePath = this.splines[region].spline
-      switch (shape) {
-        case 'line':
-          this.prepareLineMesh(extrudePath, params)
-          break
-        case 'tube':
-          this.prepareTubeMesh(extrudePath, params)
-          break
-        case 'ball':
-          this.prepareBallMesh(extrudePath, params)
-          break
-        default:
-          break
-      }
-      this.mesh = new THREE.Mesh(this.meshGeometry, this.meshMaterial)
-      this.parent.add(this.mesh)
-    },
-    prepareTubeMesh(path, params) {
       this.meshGeometry = new THREE.TubeBufferGeometry(
-        path,
+        extrudePath,
         2000,
         0.1,
         8,
@@ -317,36 +373,46 @@ export default {
       this.meshMaterial = new THREE.MeshBasicMaterial({
         color: this.splines[params.region].color
       })
+      this.mesh = new THREE.Mesh(this.meshGeometry, this.meshMaterial)
+      this.parent.add(this.mesh)
     },
-    prepareLineMesh(path, params) {
-      const points = path.getPoints(5000)
-      const geometry = new THREE.Geometry().setFromPoints(points)
-      const line = new MeshLine()
-      line.setGeometry(geometry)
-      // line.setGeometry(geometry, function() {
-      //   return 2
-      // })
-      const material = new MeshLineMaterial({
-        color: this.splines[params.region].color,
-        lineWidth: params.lineWidth / 10
-      })
-      this.meshGeometry = line.geometry
-      this.meshMaterial = material
+    disposeMesh(mesh) {
+      mesh.geometry.dispose()
+      if (mesh.material.isMaterial) {
+        mesh.material.dispose()
+      } else {
+        for (const material of mesh.material) {
+          material.dispose()
+        }
+      }
     },
-    prepareBallMesh(path, params) {
-      const points = path.getPoints(500)
-      const geometry = new THREE.SphereBufferGeometry(0.5, 16, 16)
-      const material = new THREE.MeshBasicMaterial({
-        color: this.splines[params.region].color
-      })
-      const geoms = []
-      points.forEach(point => {
-        const geom = geometry.clone()
-        geom.translate(point.x, point.y, point.z)
-        geoms.push(geom)
-      })
-      this.meshGeometry = BufferGeometryUtils.mergeBufferGeometries(geoms)
-      this.meshMaterial = material
+    clearSingleMesh() {
+      if (this.mesh) {
+        this.parent.remove(this.mesh)
+        this.disposeMesh(this.mesh)
+      }
+    },
+    clearAllMeshes() {
+      if (Object.keys(this.meshes).length) {
+        Object.keys(this.meshes).forEach(chrom => {
+          const mesh = this.meshes[chrom]
+          this.scene.remove(mesh)
+          this.disposeMesh(mesh)
+        })
+      }
+    },
+    saveBlob(blob, fileName) {
+      const a = document.createElement('a')
+      document.body.appendChild(a)
+      a.style.display = 'none'
+      return (function saveData(blob, fileName) {
+        // console.log(blob)
+        const url = window.URL.createObjectURL(blob)
+        // console.log(url)
+        a.href = url
+        a.download = fileName
+        a.click()
+      })(blob, fileName)
     }
   },
   mounted() {
@@ -358,13 +424,21 @@ export default {
       if (newData !== oldData) {
         // renderShape(newData, this.scene, this.drawParam)
         this.splines = getSplines(newData)
+        this.clearSingleMesh()
+        this.clearAllMeshes()
         // show fist model by default
         const chroms = Object.keys(this.splines)
-        const defaultParams = {
-          ...this.params,
-          region: chroms[0]
+        // set each chrom color
+        Object.keys(this.splines).forEach(chrom => {
+          const colorKey = `color_${chrom}`
+          this.params[colorKey] = this.splines[chrom].color
+        })
+        this.params.region = chroms[0]
+        if (this.params.showAll) {
+          this.addAllShapes(this.params)
+        } else {
+          this.addShapes(this.params)
         }
-        this.addShapes(defaultParams)
         this.updateGui()
       }
     }
