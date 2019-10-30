@@ -327,6 +327,9 @@ export default {
     },
     toggleAllMode() {
       if (this.params.showAll) {
+        this.params.animationView = false
+        this.params.lookAhead = false
+        this.params.cameraHelper = false
         this.clearSingleMesh()
         this.addAllShapes(this.params)
         this.updateGui()

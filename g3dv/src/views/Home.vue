@@ -1,6 +1,7 @@
 <template>
   <div class="home">
     <div>
+      <h4>Genomic 3D Visualizer</h4>
       <router-link to="/about">About</router-link>
       <Menu />
     </div>

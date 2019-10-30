@@ -23,9 +23,9 @@ function reformatData(data) {
 }
 
 export function getSplines(data) {
-  console.log('preparing splines...')
+  // console.log('preparing splines...')
   if (!data.length) {
-    console.error('error: data for splines is empty')
+    // console.error('error: data for splines is empty')
     return
   }
   const splines = {}
@@ -93,9 +93,9 @@ export function getLineMesh(spline, param, chrom) {
 }
 
 export function renderShape(data, scene, param) {
-  console.log('render tube...', param)
+  // console.log('render tube...', param)
   if (!data.length) {
-    console.error('error: data for tube is empty')
+    // console.error('error: data for tube is empty')
     return
   }
   // clear old objects on the scene
@@ -114,7 +114,7 @@ export function renderShape(data, scene, param) {
       const points = tubeData.map(
         item => new THREE.Vector3(item[3], item[4], item[5])
       )
-      console.log(points.length)
+      // console.log(points.length)
       const spline = new THREE.CatmullRomCurve3(points)
 
       // const geometry = new THREE.BufferGeometry().setFromPoints(points2)

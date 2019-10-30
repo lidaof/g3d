@@ -3,5 +3,6 @@
     "restructuredtext.confPath": "${workspaceFolder}/docs",
     "editor.fontSize": 13,
     "python.autoComplete.extraPaths": ["./g3dtools"],
-    "python.jediEnabled": false
+    "python.jediEnabled": false,
+    "liveServer.settings.port": 5501
 }
