@@ -11,6 +11,10 @@
 import { mapState } from 'vuex'
 import * as THREE from 'three'
 import OrbitControls from 'three-orbitcontrols'
+import {
+  CSS2DRenderer,
+  CSS2DObject
+} from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
 import {
@@ -44,6 +48,8 @@ export default {
       cameraEye: null,
       meshGeometry: null,
       meshMaterial: null,
+      labelRenderer: null,
+      labelControls: null,
       params: {
         region: '',
         shape: 'line',
@@ -89,21 +95,19 @@ export default {
       })
     },
     createCamera() {
+      const containerWidth = this.container.clientWidth
+      const containerHeight = this.container.clientHeight
+      const aspect = containerWidth / containerHeight
       this.camera = new THREE.PerspectiveCamera(
         50, // FOV
-        this.container.clientWidth / this.container.clientHeight, // aspect
+        aspect, // aspect
         0.1, // near clipping plane
         10000 // far clipping plane
       )
 
       this.camera.position.set(0, 50, 200)
 
-      this.splineCamera = new THREE.PerspectiveCamera(
-        84,
-        this.container.clientWidth / this.container.clientHeight,
-        0.01,
-        1000
-      )
+      this.splineCamera = new THREE.PerspectiveCamera(84, aspect, 0.01, 1000)
       this.parent.add(this.splineCamera)
 
       this.cameraHelper = new THREE.CameraHelper(this.splineCamera)
@@ -142,6 +146,21 @@ export default {
 
       this.renderer.setPixelRatio(window.devicePixelRatio)
       this.container.appendChild(this.renderer.domElement)
+
+      // label renderer
+      this.labelRenderer = new CSS2DRenderer()
+      this.labelRenderer.setSize(
+        this.container.clientWidth,
+        this.container.clientHeight
+      )
+      this.labelRenderer.domElement.style.position = 'absolute'
+      this.labelRenderer.domElement.style.top = 0
+      this.labelRenderer.domElement.id = 'labelDiv'
+      this.container.appendChild(this.labelRenderer.domElement)
+      // this.labelControls = new OrbitControls(
+      //   this.camera,
+      //   this.labelRenderer.domElement
+      // )
     },
     updateGui() {
       if (this.gui) {
@@ -173,6 +192,16 @@ export default {
               if (this.meshes[chrom]) {
                 this.meshes[chrom].material.color.setStyle(e)
               }
+            })
+        })
+        const displayControl = this.gui.addFolder('Display')
+        Object.keys(this.splines).forEach(chrom => {
+          const displayKey = `display_${chrom}`
+          displayControl
+            .add(this.params, displayKey)
+            .name(chrom)
+            .onChange(val => {
+              this.meshes[chrom].visible = val
             })
         })
         this.gui
@@ -309,6 +338,7 @@ export default {
         this.scene,
         this.params.animationView ? this.splineCamera : this.camera
       )
+      this.labelRenderer.render(this.scene, this.camera)
       this.stats.end()
     },
     onWindowResize() {
@@ -325,7 +355,14 @@ export default {
         this.container.clientHeight
       )
     },
+    clearLabelDiv() {
+      const labelDiv = document.querySelector('#labelDiv')
+      while (labelDiv.firstChild) {
+        labelDiv.removeChild(labelDiv.firstChild)
+      }
+    },
     toggleAllMode() {
+      this.clearLabelDiv()
       if (this.params.showAll) {
         this.params.animationView = false
         this.params.lookAhead = false
@@ -358,6 +395,16 @@ export default {
             break
         }
         this.scene.add(mesh)
+        const displayKey = `display_${chrom}`
+        mesh.visible = this.params[displayKey]
+        // add label
+        const labelDiv = document.createElement('div')
+        labelDiv.className = 'label'
+        labelDiv.textContent = chrom
+        labelDiv.style.marginTop = '-1em'
+        const label = new CSS2DObject(labelDiv)
+        label.position.copy(spline.getPoint(0))
+        mesh.add(label)
         this.meshes[chrom] = mesh
       })
     },
@@ -377,6 +424,14 @@ export default {
         color: this.splines[params.region].color
       })
       this.mesh = new THREE.Mesh(this.meshGeometry, this.meshMaterial)
+      // add label
+      const labelDiv = document.createElement('div')
+      labelDiv.className = 'label'
+      labelDiv.textContent = region
+      labelDiv.style.marginTop = '-1em'
+      const label = new CSS2DObject(labelDiv)
+      label.position.copy(extrudePath.getPoint(0))
+      this.mesh.add(label)
       this.parent.add(this.mesh)
     },
     disposeMesh(mesh) {
@@ -434,7 +489,9 @@ export default {
         // set each chrom color
         Object.keys(this.splines).forEach(chrom => {
           const colorKey = `color_${chrom}`
+          const displayKey = `display_${chrom}`
           this.params[colorKey] = this.splines[chrom].color
+          this.params[displayKey] = true
         })
         this.params.region = chroms[0]
         if (this.params.showAll) {
@@ -443,6 +500,7 @@ export default {
           this.addShapes(this.params)
         }
         this.updateGui()
+        this.clearLabelDiv()
       }
     }
     // drawParam: {
@@ -478,5 +536,17 @@ export default {
   position: absolute;
   top: 0px;
   right: 0px;
+  z-index: 10;
+}
+
+.dg .cr.boolean {
+  overflow: visible;
+}
+.label {
+  font-size: 12px;
+  color: #fff;
+  font-family: sans-serif;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.6);
 }
 </style>
