@@ -62,7 +62,8 @@ export default {
         speed: 1,
         sceneColor: 0x00000,
         screenshot: null,
-        showAll: false
+        showAll: false,
+        displayLabels: true
       }
     }
   },
@@ -155,7 +156,7 @@ export default {
       )
       this.labelRenderer.domElement.style.position = 'absolute'
       this.labelRenderer.domElement.style.top = 0
-      this.labelRenderer.domElement.id = 'labelDiv'
+      // this.labelRenderer.domElement.id = 'labelDiv'
       this.container.appendChild(this.labelRenderer.domElement)
       // this.labelControls = new OrbitControls(
       //   this.camera,
@@ -176,6 +177,10 @@ export default {
         .name('Background')
         .listen()
         .onChange(e => (this.scene.background = new THREE.Color(e)))
+      this.gui
+        .add(this.params, 'displayLabels')
+        .name('Show label')
+        .onChange(() => this.toggleLabelDisplay())
       this.gui
         .add(this.params, 'showAll')
         .name('Show all')
@@ -354,12 +359,22 @@ export default {
         this.container.clientWidth,
         this.container.clientHeight
       )
+      this.labelRenderer.setSize(
+        this.container.clientWidth,
+        this.container.clientHeight
+      )
     },
     clearLabelDiv() {
-      const labelDiv = document.querySelector('#labelDiv')
+      // const labelDiv = document.querySelector('#labelDiv')
+      const labelDiv = this.labelRenderer.domElement
       while (labelDiv.firstChild) {
         labelDiv.removeChild(labelDiv.firstChild)
       }
+    },
+    toggleLabelDisplay() {
+      // const labelDiv = document.querySelector('#labelDiv')
+      const labelDiv = this.labelRenderer.domElement
+      labelDiv.style.display = this.params.displayLabels ? 'block' : 'none'
     },
     toggleAllMode() {
       this.clearLabelDiv()
@@ -402,6 +417,9 @@ export default {
         labelDiv.className = 'label'
         labelDiv.textContent = chrom
         labelDiv.style.marginTop = '-1em'
+        const colorKey = `color_${chrom}`
+        const color = params[colorKey]
+        labelDiv.style.color = color
         const label = new CSS2DObject(labelDiv)
         label.position.copy(spline.getPoint(0))
         mesh.add(label)
@@ -429,6 +447,7 @@ export default {
       labelDiv.className = 'label'
       labelDiv.textContent = region
       labelDiv.style.marginTop = '-1em'
+      labelDiv.style.color = this.splines[params.region].color
       const label = new CSS2DObject(labelDiv)
       label.position.copy(extrudePath.getPoint(0))
       this.mesh.add(label)

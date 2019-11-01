@@ -39,7 +39,7 @@ export function getSplines(data) {
       const points = tubeData.map(
         item => new THREE.Vector3(item[3], item[4], item[5])
       )
-      console.log(points.length)
+      // console.log(points.length)
       const spline = new THREE.CatmullRomCurve3(points)
       const color = palette[datIndex + keyIndex]
       splines[`${dat.region}_${key}`] = { spline, color }
