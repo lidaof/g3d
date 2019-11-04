@@ -17,6 +17,7 @@ import {
 } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import Stats from 'stats-js'
 import * as dat from 'dat.gui'
+import html2canvas from 'html2canvas'
 import {
   getSplines,
   getBallMesh,
@@ -207,6 +208,9 @@ export default {
             .name(chrom)
             .onChange(val => {
               this.meshes[chrom].visible = val
+              this.meshes[chrom].children.forEach(
+                child => (child.visible = val)
+              )
             })
         })
         this.gui
@@ -262,9 +266,15 @@ export default {
       }
 
       // screenshot function
-      this.params.screenshot = () => {
+      this.params.screenshot = async () => {
         this.render()
-        this.renderer.domElement.toBlob(blob =>
+        let screenshotCanvas
+        if (this.params.displayLabels) {
+          screenshotCanvas = await this.mergeCanvas()
+        } else {
+          screenshotCanvas = this.renderer.domElement
+        }
+        screenshotCanvas.toBlob(blob =>
           this.saveBlob(
             blob,
             `g3dv-screencapture-${new Date().toISOString()}.png`
@@ -272,6 +282,26 @@ export default {
         )
       }
       this.gui.add(this.params, 'screenshot').name('📷Screenshot')
+    },
+    async mergeCanvas() {
+      const labelCanvas = await html2canvas(this.labelRenderer.domElement, {
+        backgroundColor: null
+      })
+      this.render()
+      const threeCanvas = this.renderer.domElement
+      const newCanvas = document.createElement('canvas')
+      const ctx = newCanvas.getContext('2d')
+      const width = threeCanvas.width
+      const height = threeCanvas.height
+
+      newCanvas.width = width
+      newCanvas.height = height
+      ;[threeCanvas, labelCanvas].forEach(function(n) {
+        ctx.beginPath()
+        ctx.drawImage(n, 0, 0, width, height)
+      })
+
+      return newCanvas
     },
     setScale() {
       this.mesh.scale.set(
