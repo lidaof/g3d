@@ -51,6 +51,9 @@ export default {
       meshMaterial: null,
       labelRenderer: null,
       labelControls: null,
+      mouse: new THREE.Vector2(),
+      INTERSECTED: null,
+      raycaster: null,
       params: {
         region: '',
         shape: 'line',
@@ -140,6 +143,7 @@ export default {
       this.scene.add(ambientLight, mainLight)
     },
     createRenderer() {
+      this.raycaster = new THREE.Raycaster()
       this.renderer = new THREE.WebGLRenderer({ antialias: true })
       this.renderer.setSize(
         this.container.clientWidth,
@@ -163,6 +167,13 @@ export default {
       //   this.camera,
       //   this.labelRenderer.domElement
       // )
+      document.addEventListener('mousemove', this.onDocumentMouseMove, false)
+    },
+    onDocumentMouseMove(event) {
+      event.preventDefault()
+      // console.log(event.clientX, event.clientY)
+      this.mouse.x = (event.clientX / this.container.clientWidth) * 2 - 1
+      this.mouse.y = -(event.clientY / this.container.clientHeight) * 2 + 1
     },
     updateGui() {
       if (this.gui) {
@@ -374,6 +385,35 @@ export default {
         this.params.animationView ? this.splineCamera : this.camera
       )
       this.labelRenderer.render(this.scene, this.camera)
+
+      // find intersecions
+      this.camera.updateMatrixWorld()
+      this.raycaster.setFromCamera(this.mouse, this.camera)
+
+      const intersects = this.raycaster.intersectObjects(this.scene.children)
+      for (let i = 0; i < intersects.length; i++) {
+        intersects[i].object.material.color.set(0xff0000)
+      }
+      // if (intersects.length > 0) {
+      //   console.log(intersects)
+      //   if (intersects[0].object.isMesh) {
+      //     if (this.INTERSECTED !== intersects[0].object) {
+      //       if (this.INTERSECTED) {
+      //         this.INTERSECTED.scale(1, 1, 1)
+      //       }
+
+      //       this.INTERSECTED = intersects[0].object
+      //       this.INTERSECTED.scale(1.1, 1.1, 1.1)
+      //     } else {
+      //       if (this.INTERSECTED) {
+      //         this.INTERSECTED.scale(1, 1, 1)
+      //       }
+
+      //       this.INTERSECTED = null
+      //     }
+      //   }
+      // }
+
       this.stats.end()
     },
     onWindowResize() {
@@ -561,6 +601,7 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize)
+    document.removeEventListener('mousemove', this.onDocumentMouseMove)
   }
 }
 </script>
