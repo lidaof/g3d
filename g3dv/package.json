@@ -34,6 +34,8 @@
     "three": "^0.109.0",
     "three-orbitcontrols": "^2.108.1",
     "three.meshline": "^1.2.0",
+    "threex-domevents": "^1.0.0",
+    "threex.domevents": "^1.0.1",
     "vue-template-compiler": "^2.6.10"
   }
 }

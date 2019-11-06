@@ -1,7 +1,15 @@
 <template>
   <a-scene embedded arjs="sourceType: webcam;" v-if="dataReady">
-    <a-entity mymesh></a-entity>
-    <a-marker-camera preset="hiro"></a-marker-camera>
+    <a-entity
+      mymesh
+      animation="property: rotation; from: 0 0 0; to: 360 360 360; easing: linear; dur: 10000; loop: true"
+    ></a-entity>
+    <!-- <a-marker-camera preset="kanji"></a-marker-camera> -->
+    <a-marker-camera
+      preset="custom"
+      type="pattern"
+      url="https://wangftp.wustl.edu/~dli/test/pattern-arch2.patt"
+    ></a-marker-camera>
   </a-scene>
 </template>
 
@@ -28,14 +36,14 @@ export default {
       const data = await gf.readDataGenome(200000)
       this.splines = getSplines(data)
       this.dataReady = true
-      console.log(this.splines)
+      // console.log(this.splines)
     }
   },
   async created() {
-    console.log('created')
-    console.log('init data')
+    // console.log('created')
+    // console.log('init data')
     await this.initData()
-    console.log('init ready')
+    // console.log('init ready')
   },
   watch: {
     dataReady(newData) {
@@ -44,7 +52,7 @@ export default {
         AFRAME.registerComponent('mymesh', {
           update: function() {
             const group = new THREE.Object3D()
-            console.log(that.splines)
+            // console.log(that.splines)
             Object.keys(that.splines).forEach(chrom => {
               const { spline, color } = that.splines[chrom]
               const geometry = new THREE.TubeBufferGeometry(
@@ -56,7 +64,7 @@ export default {
               )
               const material = new THREE.MeshBasicMaterial({ color })
               const mesh = new THREE.Mesh(geometry, material)
-              mesh.scale.set(0.01, 0.01, 0.01)
+              mesh.scale.set(0.02, 0.02, 0.02)
               group.add(mesh)
             })
 
@@ -76,9 +84,17 @@ export default {
             group.position.y = 0.5
             group.position.z = 0
 
-            console.log(group)
+            // console.log(group)
             this.el.setObject3D('mesh', group) //unique name for each object
-            console.log(this.el.object3DMap)
+            // this.el.object3D.rotation.set(
+            //   THREE.Math.degToRad(15),
+            //   THREE.Math.degToRad(30),
+            //   THREE.Math.degToRad(90)
+            // )
+            // this.el.object3D.rotation.x += 0.01
+            // this.el.object3D.rotation.y += 0.01
+            // this.el.object3D.rotation.z += 0.01
+            // console.log(this.el.object3DMap)
           }
         })
       }

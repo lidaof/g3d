@@ -26,6 +26,41 @@ import {
 } from '@/components/Tube'
 // import { clearScene } from '@/helper'
 
+const initializeDomEvents = require('threex-domevents')
+const THREEx = {}
+initializeDomEvents(THREE, THREEx)
+
+// const THREEx = window.THREEx
+
+/**
+ * this calss is from https://threejsfundamentals.org/threejs/lessons/threejs-picking.html
+ */
+// class PickHelper {
+//   constructor() {
+//     this.raycaster = new THREE.Raycaster()
+//     this.pickedObject = null
+//   }
+//   pick(normalizedPosition, pickTargets, camera) {
+//     // restore the color if there is a picked object
+//     if (this.pickedObject) {
+//       this.pickedObject.scale.set(1, 1, 1)
+//       this.pickedObject = undefined
+//     }
+
+//     // cast a ray through the frustum
+//     this.raycaster.setFromCamera(normalizedPosition, camera)
+//     // get the list of objects the ray intersected
+//     const intersectedObjects = this.raycaster.intersectObjects(pickTargets)
+//     if (intersectedObjects.length) {
+//       // pick the first object. It's the closest one
+//       this.pickedObject = intersectedObjects[0].object
+//       // save its color
+//       console.log(this.pickedObject)
+//       this.pickedObject.scale.set(1.1, 1.1, 1.1)
+//     }
+//   }
+// }
+
 export default {
   name: 'ThreeScene',
   data() {
@@ -51,9 +86,10 @@ export default {
       meshMaterial: null,
       labelRenderer: null,
       labelControls: null,
-      mouse: new THREE.Vector2(),
-      INTERSECTED: null,
-      raycaster: null,
+      // pickPosition: { x: 0, y: 0 },
+      // pickHelper: new PickHelper(),
+      domEvents: null,
+      selectedMesh: null,
       params: {
         region: '',
         shape: 'line',
@@ -143,7 +179,6 @@ export default {
       this.scene.add(ambientLight, mainLight)
     },
     createRenderer() {
-      this.raycaster = new THREE.Raycaster()
       this.renderer = new THREE.WebGLRenderer({ antialias: true })
       this.renderer.setSize(
         this.container.clientWidth,
@@ -161,19 +196,17 @@ export default {
       )
       this.labelRenderer.domElement.style.position = 'absolute'
       this.labelRenderer.domElement.style.top = 0
-      // this.labelRenderer.domElement.id = 'labelDiv'
+      this.labelRenderer.domElement.id = 'labelDiv' // for by pass mouse events
       this.container.appendChild(this.labelRenderer.domElement)
       // this.labelControls = new OrbitControls(
       //   this.camera,
       //   this.labelRenderer.domElement
       // )
-      document.addEventListener('mousemove', this.onDocumentMouseMove, false)
-    },
-    onDocumentMouseMove(event) {
-      event.preventDefault()
-      // console.log(event.clientX, event.clientY)
-      this.mouse.x = (event.clientX / this.container.clientWidth) * 2 - 1
-      this.mouse.y = -(event.clientY / this.container.clientHeight) * 2 + 1
+
+      this.domEvents = new THREEx.DomEvents(
+        this.camera,
+        this.renderer.domElement
+      )
     },
     updateGui() {
       if (this.gui) {
@@ -379,40 +412,16 @@ export default {
       this.splineCamera.quaternion.setFromRotationMatrix(
         this.splineCamera.matrix
       )
+
+      // //picker
+      // this.pickHelper.pick(this.pickPosition, this.scene.children, this.camera)
+
       this.cameraHelper.update()
       this.renderer.render(
         this.scene,
         this.params.animationView ? this.splineCamera : this.camera
       )
       this.labelRenderer.render(this.scene, this.camera)
-
-      // find intersecions
-      this.camera.updateMatrixWorld()
-      this.raycaster.setFromCamera(this.mouse, this.camera)
-
-      const intersects = this.raycaster.intersectObjects(this.scene.children)
-      for (let i = 0; i < intersects.length; i++) {
-        intersects[i].object.material.color.set(0xff0000)
-      }
-      // if (intersects.length > 0) {
-      //   console.log(intersects)
-      //   if (intersects[0].object.isMesh) {
-      //     if (this.INTERSECTED !== intersects[0].object) {
-      //       if (this.INTERSECTED) {
-      //         this.INTERSECTED.scale(1, 1, 1)
-      //       }
-
-      //       this.INTERSECTED = intersects[0].object
-      //       this.INTERSECTED.scale(1.1, 1.1, 1.1)
-      //     } else {
-      //       if (this.INTERSECTED) {
-      //         this.INTERSECTED.scale(1, 1, 1)
-      //       }
-
-      //       this.INTERSECTED = null
-      //     }
-      //   }
-      // }
 
       this.stats.end()
     },
@@ -522,6 +531,17 @@ export default {
       label.position.copy(extrudePath.getPoint(0))
       this.mesh.add(label)
       this.parent.add(this.mesh)
+      this.domEvents.addEventListener(
+        this.mesh,
+        'click',
+        () => {
+          this.selectedMesh = this.mesh
+          this.selectedMesh.material.color.set(0xffff00)
+          this.selectedMesh.scale.set(1.1, 1.1, 1.1)
+          this.selectedMesh.children[0].element.style.color = '#ffff00'
+        },
+        false
+      )
     },
     disposeMesh(mesh) {
       mesh.geometry.dispose()
@@ -561,10 +581,50 @@ export default {
         a.click()
       })(blob, fileName)
     }
+    // getCanvasRelativePosition(event) {
+    //   const rect = this.container.getBoundingClientRect()
+    //   return {
+    //     x: event.clientX - rect.left,
+    //     y: event.clientY - rect.top
+    //   }
+    // },
+    // setPickPosition(event) {
+    //   const pos = this.getCanvasRelativePosition(event)
+    //   this.pickPosition.x = (pos.x / this.container.clientWidth) * 2 - 1
+    //   this.pickPosition.y = (pos.y / this.container.clientHeight) * -2 + 1 // note we flip Y
+    // },
+    // clearPickPosition() {
+    //   // unlike the mouse which always has a position
+    //   // if the user stops touching the screen we want
+    //   // to stop picking. For now we just pick a value
+    //   // unlikely to pick something
+    //   this.pickPosition.x = -100000
+    //   this.pickPosition.y = -100000
+    // }
   },
   mounted() {
     this.init()
     window.addEventListener('resize', this.onWindowResize)
+    // window.addEventListener('mousemove', this.setPickPosition)
+    // window.addEventListener('mouseout', this.clearPickPosition)
+    // window.addEventListener('mouseleave', this.clearPickPosition)
+
+    // //for mobile
+    // window.addEventListener(
+    //   'touchstart',
+    //   event => {
+    //     // prevent the window from scrolling
+    //     event.preventDefault()
+    //     this.setPickPosition(event.touches[0])
+    //   },
+    //   { passive: false }
+    // )
+
+    // window.addEventListener('touchmove', event => {
+    //   this.setPickPosition(event.touches[0])
+    // })
+
+    // window.addEventListener('touchend', this.clearPickPosition)
   },
   watch: {
     data3d(newData, oldData) {
@@ -601,7 +661,9 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize)
-    document.removeEventListener('mousemove', this.onDocumentMouseMove)
+    // window.removeEventListener('mousemove', this.setPickPosition)
+    // window.removeEventListener('mouseout', this.clearPickPosition)
+    // window.removeEventListener('mouseleave', this.clearPickPosition)
   }
 }
 </script>
@@ -638,5 +700,9 @@ export default {
   font-family: sans-serif;
   padding: 2px;
   background: rgba(0, 0, 0, 0.6);
+}
+
+#labelDiv {
+  pointer-events: none;
 }
 </style>
