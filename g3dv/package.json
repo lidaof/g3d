@@ -20,8 +20,6 @@
     "@vue/cli-service": "^3.11.0",
     "@vue/eslint-config-prettier": "^5.0.0",
     "babel-eslint": "^10.0.1",
-    "babylonjs": "^4.0.3",
-    "babylonjs-gui": "^4.0.3",
     "dat.gui": "^0.7.6",
     "eslint": "^5.16.0",
     "eslint-plugin-prettier": "^3.1.0",
@@ -34,8 +32,6 @@
     "three": "^0.109.0",
     "three-orbitcontrols": "^2.108.1",
     "three.meshline": "^1.2.0",
-    "threex-domevents": "^1.0.0",
-    "threex.domevents": "^1.0.1",
     "vue-template-compiler": "^2.6.10"
   }
 }

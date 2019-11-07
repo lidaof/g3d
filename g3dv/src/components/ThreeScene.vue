@@ -26,12 +26,6 @@ import {
 } from '@/components/Tube'
 // import { clearScene } from '@/helper'
 
-const initializeDomEvents = require('threex-domevents')
-const THREEx = {}
-initializeDomEvents(THREE, THREEx)
-
-// const THREEx = window.THREEx
-
 /**
  * this calss is from https://threejsfundamentals.org/threejs/lessons/threejs-picking.html
  */
@@ -89,7 +83,6 @@ export default {
       // pickPosition: { x: 0, y: 0 },
       // pickHelper: new PickHelper(),
       domEvents: null,
-      selectedMesh: null,
       params: {
         region: '',
         shape: 'line',
@@ -103,7 +96,10 @@ export default {
         sceneColor: 0x00000,
         screenshot: null,
         showAll: false,
-        displayLabels: true
+        displayLabels: true,
+        selectedMeshChrom: null,
+        previousSelected: null,
+        unSelectMesh: null
       }
     }
   },
@@ -196,17 +192,12 @@ export default {
       )
       this.labelRenderer.domElement.style.position = 'absolute'
       this.labelRenderer.domElement.style.top = 0
-      this.labelRenderer.domElement.id = 'labelDiv' // for by pass mouse events
+      // this.labelRenderer.domElement.id = 'labelDiv' // for by pass mouse events
       this.container.appendChild(this.labelRenderer.domElement)
       // this.labelControls = new OrbitControls(
       //   this.camera,
       //   this.labelRenderer.domElement
       // )
-
-      this.domEvents = new THREEx.DomEvents(
-        this.camera,
-        this.renderer.domElement
-      )
     },
     updateGui() {
       if (this.gui) {
@@ -280,7 +271,10 @@ export default {
         this.gui
           .addColor(this.params, 'color')
           .listen()
-          .onChange(e => this.meshMaterial.color.setStyle(e))
+          .onChange(e => {
+            this.meshMaterial.color.setStyle(e)
+            this.mesh.children[0].element.style.color = e
+          })
         this.gui
           .add(this.params, 'scale', 1, 10)
           .onChange(() => this.setScale())
@@ -308,7 +302,12 @@ export default {
         })
         folderCamera.open()
       }
-
+      //current selction
+      this.params.unSelectMesh = () => {
+        this.params.previousSelected = this.params.selectedMeshChrom
+        this.params.selectedMeshChrom = null
+      }
+      this.gui.add(this.params, 'unSelectMesh').name('Remove selection')
       // screenshot function
       this.params.screenshot = async () => {
         this.render()
@@ -359,7 +358,35 @@ export default {
       this.cameraEye.visible = this.params.cameraHelper
     },
     update() {
-      // Don't delete this function!
+      if (this.params.showAll) {
+        Object.keys(this.meshes).forEach(chrom => {
+          if (chrom === this.params.selectedMeshChrom) {
+            this.meshes[chrom].material.color.set(0xffff00)
+            this.meshes[chrom].scale.set(1.1, 1.1, 1.1)
+            this.meshes[chrom].children[0].element.style.color = '#ffff00'
+          }
+          if (chrom === this.params.previousSelected) {
+            const colorKey = `color_${chrom}`
+            const color = this.params[colorKey]
+            this.meshes[chrom].material.color.setStyle(color)
+            this.meshes[chrom].scale.set(1, 1, 1)
+            this.meshes[chrom].children[0].element.style.color = color
+          }
+        })
+      } else {
+        if (this.params.selectedMeshChrom) {
+          this.mesh.material.color.set(0xffff00)
+          this.mesh.scale.set(1.1, 1.1, 1.1)
+          this.mesh.children[0].element.style.color = '#ffff00'
+        } else {
+          if (this.params.previousSelected) {
+            const color = this.splines[this.params.region].color
+            this.mesh.material.color.setStyle(color)
+            this.mesh.scale.set(1, 1, 1)
+            this.mesh.children[0].element.style.color = color
+          }
+        }
+      }
     },
     render() {
       this.stats.begin()
@@ -457,6 +484,7 @@ export default {
     },
     toggleAllMode() {
       this.clearLabelDiv()
+      this.params.selectedMeshChrom = null
       if (this.params.showAll) {
         this.params.animationView = false
         this.params.lookAhead = false
@@ -472,6 +500,7 @@ export default {
     },
     addAllShapes(params) {
       this.clearAllMeshes()
+      this.clearLabelDiv()
       Object.keys(this.splines).forEach(chrom => {
         const { spline } = this.splines[chrom]
         let mesh
@@ -503,17 +532,27 @@ export default {
         label.position.copy(spline.getPoint(0))
         mesh.add(label)
         this.meshes[chrom] = mesh
+        labelDiv.addEventListener(
+          'click',
+          () => {
+            this.params.previousSelected = this.params.selectedMeshChrom
+            this.params.selectedMeshChrom = chrom
+          },
+          false
+        )
       })
     },
     addShapes(params) {
       // clearScene(this.scene)
       this.clearSingleMesh()
+      this.clearLabelDiv()
+      this.params.selectedMeshChrom = null
       const { region } = params
       const extrudePath = this.splines[region].spline
       this.meshGeometry = new THREE.TubeBufferGeometry(
         extrudePath,
         2000,
-        0.1,
+        0.2,
         8,
         false
       )
@@ -531,14 +570,11 @@ export default {
       label.position.copy(extrudePath.getPoint(0))
       this.mesh.add(label)
       this.parent.add(this.mesh)
-      this.domEvents.addEventListener(
-        this.mesh,
+      labelDiv.addEventListener(
         'click',
         () => {
-          this.selectedMesh = this.mesh
-          this.selectedMesh.material.color.set(0xffff00)
-          this.selectedMesh.scale.set(1.1, 1.1, 1.1)
-          this.selectedMesh.children[0].element.style.color = '#ffff00'
+          this.params.previousSelected = this.params.selectedMeshChrom
+          this.params.selectedMeshChrom = params.region
         },
         false
       )
@@ -700,9 +736,10 @@ export default {
   font-family: sans-serif;
   padding: 2px;
   background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
 }
 
-#labelDiv {
+/* #labelDiv {
   pointer-events: none;
-}
+} */
 </style>

@@ -25,8 +25,7 @@ export default new Router({
     {
       path: '/ARdemo',
       name: 'ARdemo',
-      component: () =>
-        import( './views/ARdemo.vue')
+      component: () => import('./views/ARdemo.vue')
     }
   ]
 })
