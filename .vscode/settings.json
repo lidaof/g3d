@@ -1,8 +1,8 @@
 {
-    "python.pythonPath": "/anaconda3/bin/python",
-    "restructuredtext.confPath": "${workspaceFolder}/docs",
+    "python.pythonPath": "/Users/dli/anaconda3/bin/python",
     "editor.fontSize": 13,
     "python.autoComplete.extraPaths": ["./g3dtools"],
     "python.jediEnabled": false,
-    "liveServer.settings.port": 5501
+    "liveServer.settings.port": 5501,
+    "restructuredtext.confPath": "${workspaceFolder}/docs"
 }
