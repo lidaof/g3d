@@ -1,13 +1,21 @@
 <template>
   <form @submit.prevent="handleSubmit">
     <div class="field">
-      <label>Input a G3D file URL</label>
-      <input
-        type="text"
-        v-model="g3d.url"
-        placeholder="G3D file url"
-        size="40"
-      />
+      <Tabs>
+        <Tab name="Remote file" :selected="true">
+          <label>Input a G3D file URL</label>
+          <input
+            type="text"
+            v-model="g3d.url"
+            placeholder="G3D file url"
+            size="40"
+          />
+        </Tab>
+        <Tab name="Local file">
+          <label>Choose a local G3D file</label>
+          <input type="file" @change="onFileChange" />
+        </Tab>
+      </Tabs>
     </div>
     <div class="field">
       <label>Genome assembly</label>
@@ -78,6 +86,8 @@
 <script>
 import G3dFile from 'g3djs'
 import { mapState } from 'vuex'
+import Tabs from '@/components/Tabs.vue'
+import Tab from '@/components/Tab.vue'
 export default {
   name: 'Menu',
   data() {
@@ -87,8 +97,20 @@ export default {
       error: null
     }
   },
+  components: {
+    Tab,
+    Tabs
+  },
   computed: mapState(['isLoading', 'stateErrorMsg']),
   methods: {
+    onFileChange(e) {
+      const files = e.target.files || e.dataTransfer.files
+      if (!files.length) {
+        this.error = 'Please select a local file'
+        return
+      }
+      this.g3d.blob = files[0]
+    },
     fillExample() {
       ;(this.g3d.url = 'https://wangftp.wustl.edu/~dli/tmp/test.g3d'),
         (this.g3d.region = 'chr7:27053397-27373765')
@@ -96,6 +118,7 @@ export default {
     createFreshG3d() {
       return {
         url: '',
+        blob: null,
         region: '',
         resolution: 200000,
         regionControl: 'region'
@@ -105,13 +128,18 @@ export default {
       return res / 1000 + 'K'
     },
     async handleSubmit() {
-      if (!this.g3d.url.length) {
-        this.error = 'Please submit a URL'
-        return
-      }
-      this.error = null
+      let gf
       this.$store.dispatch('setG3d', this.g3d)
-      const gf = new G3dFile({ url: this.g3d.url })
+      if (this.g3d.blob) {
+        gf = new G3dFile({ blob: this.g3d.blob })
+      } else {
+        if (!this.g3d.url.length) {
+          this.error = 'Please submit a URL'
+          return
+        }
+        this.error = null
+        gf = new G3dFile({ url: this.g3d.url })
+      }
       this.$store.dispatch('setG3dFile', gf)
       await this.$store.dispatch('fetchData')
     }
