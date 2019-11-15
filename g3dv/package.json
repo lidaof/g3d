@@ -19,6 +19,7 @@
     "@vue/cli-plugin-eslint": "^3.11.0",
     "@vue/cli-service": "^3.11.0",
     "@vue/eslint-config-prettier": "^5.0.0",
+    "axios": "^0.19.0",
     "babel-eslint": "^10.0.1",
     "dat.gui": "^0.7.6",
     "eslint": "^5.16.0",
@@ -32,6 +33,7 @@
     "three": "^0.109.0",
     "three-orbitcontrols": "^2.108.1",
     "three.meshline": "^1.2.0",
+    "vue-autosuggest": "^2.0.4",
     "vue-template-compiler": "^2.6.10"
   }
 }

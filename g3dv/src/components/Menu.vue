@@ -80,6 +80,9 @@
     <div class="-text-error" v-if="error">{{ error }}</div>
     <div class="-text-error" v-if="stateErrorMsg">{{ stateErrorMsg }}</div>
     <div v-if="isLoading">Loading...</div>
+    <div>
+      <Gene />
+    </div>
   </form>
 </template>
 
@@ -88,6 +91,7 @@ import G3dFile from 'g3djs'
 import { mapState } from 'vuex'
 import Tabs from '@/components/Tabs.vue'
 import Tab from '@/components/Tab.vue'
+import Gene from '@/components/Gene.vue'
 export default {
   name: 'Menu',
   data() {
@@ -100,7 +104,8 @@ export default {
   },
   components: {
     Tab,
-    Tabs
+    Tabs,
+    Gene
   },
   computed: mapState(['isLoading', 'stateErrorMsg']),
   methods: {
