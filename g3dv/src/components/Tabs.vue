@@ -27,11 +27,18 @@ export default {
 
   created() {
     this.tabs = this.$children
+    this.$emit('tabHandler', this.selectTabByName)
   },
   methods: {
     selectTab(selectedTab) {
       this.tabs.forEach(tab => {
         tab.isActive = tab.name == selectedTab.name
+      })
+      this.$emit('setInputSource', selectedTab.name)
+    },
+    selectTabByName(name) {
+      this.tabs.forEach(tab => {
+        tab.isActive = tab.name == name
       })
     }
   }
@@ -55,7 +62,6 @@ ul {
 }
 .tabs li {
   display: block;
-
   align-items: center;
   border-bottom: 1px solid #dbdbdb;
   color: #4a4a4a;

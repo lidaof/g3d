@@ -1,7 +1,7 @@
 <template>
   <form @submit.prevent="handleSubmit">
     <div class="field">
-      <Tabs>
+      <Tabs @setInputSource="onSetInputSource" @tabHandler="setTabHandler">
         <Tab name="Remote file" :selected="true">
           <label>Input a G3D file URL</label>
           <input
@@ -94,7 +94,8 @@ export default {
     return {
       g3d: this.createFreshG3d(),
       resolutions: this.$store.state.resolutions,
-      error: null
+      error: null,
+      inputSource: 'Remote file'
     }
   },
   components: {
@@ -103,6 +104,14 @@ export default {
   },
   computed: mapState(['isLoading', 'stateErrorMsg']),
   methods: {
+    // the way to call a method from a child component, a little bit confusing
+    // see this SO post: https://stackoverflow.com/a/53059914/1098347
+    setTabHandler(fn) {
+      this.setTab = fn
+    },
+    onSetInputSource(name) {
+      this.inputSource = name
+    },
     onFileChange(e) {
       const files = e.target.files || e.dataTransfer.files
       if (!files.length) {
@@ -114,6 +123,7 @@ export default {
     fillExample() {
       ;(this.g3d.url = 'https://wangftp.wustl.edu/~dli/tmp/test.g3d'),
         (this.g3d.region = 'chr7:27053397-27373765')
+      this.setTab('Remote file')
     },
     createFreshG3d() {
       return {
@@ -130,7 +140,12 @@ export default {
     async handleSubmit() {
       let gf
       this.$store.dispatch('setG3d', this.g3d)
-      if (this.g3d.blob) {
+      if (this.inputSource === 'Local file') {
+        if (!this.g3d.blob) {
+          this.error = 'Please upload a g3d file'
+          return
+        }
+        this.error = null
         gf = new G3dFile({ blob: this.g3d.blob })
       } else {
         if (!this.g3d.url.length) {
@@ -270,5 +285,8 @@ select::ms-expand {
 }
 input[type='radio'] {
   margin-right: 5px;
+}
+input[type='file'] {
+  border: none;
 }
 </style>
