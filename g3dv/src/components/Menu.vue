@@ -34,13 +34,15 @@
     <div class="field">
       <label>Select a gene or region</label>
       <br />
-      <input
+      <!-- <input
         type="text"
         v-model="g3d.region"
         size="40"
         placeholder="gene symbol or region"
-      />
+      /> -->
+      <GeneSearch @setRegion="onSetRegion" :region="g3d.region" />
     </div>
+    <div class="field">Chosen region: {{ g3d.region }}</div>
     <div class="field">
       <label>Choose display region</label>
       <br />
@@ -80,9 +82,6 @@
     <div class="-text-error" v-if="error">{{ error }}</div>
     <div class="-text-error" v-if="stateErrorMsg">{{ stateErrorMsg }}</div>
     <div v-if="isLoading">Loading...</div>
-    <div>
-      <Gene />
-    </div>
   </form>
 </template>
 
@@ -91,7 +90,7 @@ import G3dFile from 'g3djs'
 import { mapState } from 'vuex'
 import Tabs from '@/components/Tabs.vue'
 import Tab from '@/components/Tab.vue'
-import Gene from '@/components/Gene.vue'
+import GeneSearch from '@/components/GeneSearch.vue'
 export default {
   name: 'Menu',
   data() {
@@ -105,10 +104,13 @@ export default {
   components: {
     Tab,
     Tabs,
-    Gene
+    GeneSearch
   },
   computed: mapState(['isLoading', 'stateErrorMsg']),
   methods: {
+    onSetRegion(r) {
+      this.g3d.region = r
+    },
     // the way to call a method from a child component, a little bit confusing
     // see this SO post: https://stackoverflow.com/a/53059914/1098347
     setTabHandler(fn) {
@@ -293,5 +295,7 @@ input[type='radio'] {
 }
 input[type='file'] {
   border: none;
+  height: 52px;
+  padding: 15px 0;
 }
 </style>

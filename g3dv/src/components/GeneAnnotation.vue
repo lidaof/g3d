@@ -15,7 +15,6 @@ export default {
   },
   methods: {
     setGene(gene) {
-      console.log('anno', gene)
       this.$emit('onSetGene', gene)
     }
   }

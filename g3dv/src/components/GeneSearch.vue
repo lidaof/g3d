@@ -1,4 +1,4 @@
-<template @onSetGene="handleSetGene">
+<template>
   <div class="search-container">
     <VueAutosuggest
       ref="autocomplete"
@@ -18,7 +18,7 @@
             v-for="isoform in isoforms"
             :key="isoform._id"
           >
-            <GeneAnnotation :gene="isoform" />
+            <GeneAnnotation :gene="isoform" @onSetGene="handleSetGene" />
           </li>
         </ul>
       </div>
@@ -46,7 +46,7 @@ export default {
       genesUrl: 'https://lambda.epigenomegateway.org/v2',
       inputProps: {
         id: 'autosuggest__input',
-        placeholder: 'gene symbol',
+        placeholder: 'gene symbol or region',
         class: 'form-control'
       },
       displayIsoform: true,
@@ -63,13 +63,29 @@ export default {
       }
     }
   },
+  props: ['region'],
+  watch: {
+    region: function(newVal, oldVal) {
+      if (newVal !== oldVal && newVal.length) {
+        this.query = newVal
+      }
+    }
+  },
   methods: {
     handleSetGene(gene) {
-      console.log(gene)
+      this.query = `${gene.chrom}:${gene.txStart}-${gene.txEnd}`
       this.displayIsoform = false
+      this.suggestions = []
+      this.isoforms = []
+      this.$emit('setRegion', this.query)
     },
     fetchResults() {
       const query = this.query.trim()
+      if (query.includes(':')) {
+        // region string
+        this.$emit('setRegion', query)
+        return
+      }
       if (query.length < 3) {
         // no fetch is symbol less than 3 letters
         return
@@ -88,6 +104,8 @@ export default {
         Promise.resolve(symbolsPromise).then(value => {
           this.suggestions = []
           this.selected = null
+          this.displayIsoform = true
+          this.isoforms = []
           this.suggestions = [{ name: 'symbols', data: value.data }]
         })
       }, this.debounceMilliseconds)
@@ -130,6 +148,8 @@ export default {
   box-sizing: border-box;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
+  height: 52px;
+  font-size: 100%;
 }
 
 #autosuggest__input.autosuggest__input-open {
