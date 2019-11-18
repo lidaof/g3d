@@ -26,9 +26,9 @@
     <div class="field">
       <label>Select a resolution</label>
       <select v-model="g3d.resolution">
-        <option v-for="res in resolutions" :key="res" :value="res">
-          {{ prettyRes(res) }}
-        </option>
+        <option v-for="res in resolutions" :key="res" :value="res">{{
+          prettyRes(res)
+        }}</option>
       </select>
     </div>
     <div class="field">
@@ -39,7 +39,7 @@
         v-model="g3d.region"
         size="40"
         placeholder="gene symbol or region"
-      /> -->
+      />-->
       <GeneSearch @setRegion="onSetRegion" :region="g3d.region" />
     </div>
     <div class="field">Chosen region: {{ g3d.region }}</div>
@@ -170,6 +170,9 @@ export default {
 </script>
 
 <style scoped>
+form {
+  min-width: 305px;
+}
 .field {
   margin-bottom: 10px;
 }

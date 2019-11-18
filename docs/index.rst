@@ -11,9 +11,9 @@ Welcome to g3d's documentation!
     :caption: Contents:
 
     intro
+    g3dv
     g3dtools
     g3djs
-    g3dv
 
 Indices and tables
 ==================
