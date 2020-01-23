@@ -148,10 +148,23 @@ def get_meta(g3d_filename):
     '''convert g3d to many text stucture files.'''
     with open(g3d_filename, 'rb') as fin:
         header = read_header(fin)
-    del header['offsets'] # too big to print
+    del header['offsets']  # too big to print
     del header['magic']
     json.dump(header, sys.stdout, indent=4)
     print()
+
+
+def parse_pastis_wrap(args):
+    parse_pastis(args.filename, args.output, args.genome,
+                 args.name, args.resolution, args.scales, args.chrom, args.header)
+
+
+def parse_pastis(file_name, out_file_name, genome, name, resolution, scales, chrom, header):
+    """
+    Parse the pastis output to .g3d format.
+    """
+    gk = Utils.parse_pastis_2_g3dKeeper(file_name, resolution, chrom, header)
+    write_g3d(gk, out_file_name, genome, name, scales)
 
 
 def parse_3dg_wrap(args):
@@ -227,6 +240,7 @@ def write_g3d(gk, out_file_name, genome, name, scales):
         # write header
         fout.seek(0)
         fout.write(meta_pkl)
+
 
 def write_g3d_small_chunks(gk, out_file_name, genome, name, scales):
     """
@@ -340,7 +354,7 @@ def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=F
             #         write_contents_file_handle(
             #             fin, fout, index[resolution][chrom][binkey])
             # using the full size index instead, faster?
-            
+
             for chrom in offsets[resolution]:
                 write_contents_file_handle_full(
                     fin, fout, offsets[resolution][chrom])
@@ -362,7 +376,7 @@ def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=F
                 return
             binkeys = Utils.reg2bins(start, end)
             write_contents_file_handle_full(
-                    fin, fout, offsets[resolution][chrom], binkeys)
+                fin, fout, offsets[resolution][chrom], binkeys)
     if output:
         fout.close()
 
@@ -387,11 +401,12 @@ def write_contents_file_handle_full(fh_in, fh_out, data, binkeys=[]):
     fh_in.seek(file_offset)
     file_pkl = fh_in.read(file_size)
     out = msgpack.unpackb(zlib.decompress(file_pkl), raw=False)
-    if len(binkeys) > 0: 
+    if len(binkeys) > 0:
         need_check = True
     for binkey in out:
         if need_check:
-            if binkey not in binkeys: continue
+            if binkey not in binkeys:
+                continue
         for con in out[binkey]:
             fh_out.write('{}\n'.format('\t'.join(map(str, con))))
 
@@ -444,6 +459,27 @@ if __name__ == '__main__':
     parser_3dg.add_argument(
         '-o', '--output', help='output file name, a suffix .g3d will be added. default: output', default='output')
     parser_3dg.set_defaults(func=parse_3dg_wrap)
+
+    # paser pastis http://projets.cbio.mines-paristech.fr/~nvaroquaux/pastis/
+    parser_pastis = subparsers.add_parser(
+        'pastis', help='dump pastis (http://projets.cbio.mines-paristech.fr/~nvaroquaux/pastis/) output to a g3d file')
+    parser_pastis.add_argument(
+        'filename', help='pastis output file, can be gzip compressed.')
+    parser_pastis.add_argument(
+        '-g', '--genome', help='genome assembly, like hg19, m10 etc. default: unknow_genome', default='unknow_genome')
+    parser_pastis.add_argument(
+        '-n', '--name', help='name information. default: unknow_name', default='unknow_name')
+    parser_pastis.add_argument('-r', '--resolution', type=int,
+                               help='pastis output file resolution, like 10000. default: 10000', default=10000)
+    parser_pastis.add_argument(
+        '-s', '--scales', help='scale to lower resolution, comma separated numbers, like 2,3,4')
+    parser_pastis.add_argument(
+        '-C', '--chrom', help='specify the chromosome name, like chr1, chr2 etc.')
+    parser_pastis.add_argument(
+        '-H', '--header', help='specify if file has header row, default false', action='store_true')
+    parser_pastis.add_argument(
+        '-o', '--output', help='output file name, a suffix .g3d will be added. default: output', default='output')
+    parser_pastis.set_defaults(func=parse_pastis_wrap)
 
     # meta
     parser_meta = subparsers.add_parser(

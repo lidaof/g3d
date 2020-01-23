@@ -16,7 +16,8 @@ export default new Vuex.Store({
       80000,
       60000,
       40000,
-      20000
+      20000,
+      10000
     ],
     g3d: {},
     data3d: [],

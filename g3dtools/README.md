@@ -52,7 +52,15 @@ Input a file with high resolution, let the tool calculate lower resolutions:
 g3dtools 3dg ../test/GSM3271347_gm12878_01.impute3.round4.clean.3dg.txt.gz -o ../testOut/GSM3271347_gm12878_01.impute3.round4.clean -s 2,3,4,5,6,7,8,9,10
 ```
 
-or prepare different resolution files in advance:
+or prepare different resolution files in advance.
+
+## Generate a new .g3d file from PASTIS output
+
+User can also generate .g3d file from [pastis](http://projets.cbio.mines-paristech.fr/~nvaroquaux/pastis/) output.
+
+```console
+g3dtools pastis -C chrX ../test/combined-WG-brain.1000000.alt.structure.3d.txt -o ../testOut/combined-WG-brain.1000000.alt.structure.3d
+```
 
 ## Query
 

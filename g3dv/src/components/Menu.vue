@@ -21,6 +21,9 @@
       <label>Genome assembly</label>
       <select>
         <option value="hg19">hg19</option>
+        <option value="hg38">hg38</option>
+        <option value="mm10">mm10</option>
+        <option value="mm9">mm9</option>
       </select>
     </div>
     <div class="field">
@@ -77,7 +80,7 @@
       </label>
     </div>
     <button type="button" @click="fillExample">Example</button>
-    {{ ' ' }}
+    {{ " " }}
     <button type="submit">Go</button>
     <div class="-text-error" v-if="error">{{ error }}</div>
     <div class="-text-error" v-if="stateErrorMsg">{{ stateErrorMsg }}</div>
@@ -86,19 +89,19 @@
 </template>
 
 <script>
-import G3dFile from 'g3djs'
-import { mapState } from 'vuex'
-import Tabs from '@/components/Tabs.vue'
-import Tab from '@/components/Tab.vue'
-import GeneSearch from '@/components/GeneSearch.vue'
+import G3dFile from "g3djs"
+import { mapState } from "vuex"
+import Tabs from "@/components/Tabs.vue"
+import Tab from "@/components/Tab.vue"
+import GeneSearch from "@/components/GeneSearch.vue"
 export default {
-  name: 'Menu',
+  name: "Menu",
   data() {
     return {
       g3d: this.createFreshG3d(),
       resolutions: this.$store.state.resolutions,
       error: null,
-      inputSource: 'Remote file'
+      inputSource: "Remote file"
     }
   },
   components: {
@@ -106,7 +109,7 @@ export default {
     Tabs,
     GeneSearch
   },
-  computed: mapState(['isLoading', 'stateErrorMsg']),
+  computed: mapState(["isLoading", "stateErrorMsg"]),
   methods: {
     onSetRegion(r) {
       this.g3d.region = r
@@ -122,48 +125,48 @@ export default {
     onFileChange(e) {
       const files = e.target.files || e.dataTransfer.files
       if (!files.length) {
-        this.error = 'Please select a local file'
+        this.error = "Please select a local file"
         return
       }
       this.g3d.blob = files[0]
     },
     fillExample() {
-      ;(this.g3d.url = 'https://wangftp.wustl.edu/~dli/tmp/test.g3d'),
-        (this.g3d.region = 'chr7:27053397-27373765')
-      this.setTab('Remote file')
+      ;(this.g3d.url = "https://wangftp.wustl.edu/~dli/tmp/test.g3d"),
+        (this.g3d.region = "chr7:27053397-27373765")
+      this.setTab("Remote file")
     },
     createFreshG3d() {
       return {
-        url: '',
+        url: "",
         blob: null,
-        region: '',
+        region: "",
         resolution: 200000,
-        regionControl: 'region'
+        regionControl: "region"
       }
     },
     prettyRes(res) {
-      return res / 1000 + 'K'
+      return res / 1000 + "K"
     },
     async handleSubmit() {
       let gf
-      this.$store.dispatch('setG3d', this.g3d)
-      if (this.inputSource === 'Local file') {
+      this.$store.dispatch("setG3d", this.g3d)
+      if (this.inputSource === "Local file") {
         if (!this.g3d.blob) {
-          this.error = 'Please upload a g3d file'
+          this.error = "Please upload a g3d file"
           return
         }
         this.error = null
         gf = new G3dFile({ blob: this.g3d.blob })
       } else {
         if (!this.g3d.url.length) {
-          this.error = 'Please submit a URL'
+          this.error = "Please submit a URL"
           return
         }
         this.error = null
         gf = new G3dFile({ url: this.g3d.url })
       }
-      this.$store.dispatch('setG3dFile', gf)
-      await this.$store.dispatch('fetchData')
+      this.$store.dispatch("setG3dFile", gf)
+      await this.$store.dispatch("fetchData")
     }
   }
 }
@@ -183,7 +186,7 @@ optgroup,
 select,
 textarea {
   display: inline-flex;
-  font-family: 'Open sans', sans-serif;
+  font-family: "Open sans", sans-serif;
   font-size: 100%;
   line-height: 1.15;
   margin: 0;
@@ -197,22 +200,22 @@ select {
   text-transform: none;
 }
 button,
-[type='button'],
-[type='reset'],
-[type='submit'] {
+[type="button"],
+[type="reset"],
+[type="submit"] {
   -webkit-appearance: none;
 }
 button::-moz-focus-inner,
-[type='button']::-moz-focus-inner,
-[type='reset']::-moz-focus-inner,
-[type='submit']::-moz-focus-inner {
+[type="button"]::-moz-focus-inner,
+[type="reset"]::-moz-focus-inner,
+[type="submit"]::-moz-focus-inner {
   border-style: none;
   padding: 0;
 }
 button:-moz-focusring,
-[type='button']:-moz-focusring,
-[type='reset']:-moz-focusring,
-[type='submit']:-moz-focusring {
+[type="button"]:-moz-focusring,
+[type="reset"]:-moz-focusring,
+[type="submit"]:-moz-focusring {
   outline: 2px solid #39b982;
 }
 label {
@@ -229,35 +232,35 @@ textarea {
   overflow: auto;
   font-size: 20px;
 }
-[type='checkbox'],
-[type='radio'] {
+[type="checkbox"],
+[type="radio"] {
   box-sizing: border-box;
   padding: 0;
 }
-[type='number']::-webkit-inner-spin-button,
-[type='number']::-webkit-outer-spin-button {
+[type="number"]::-webkit-inner-spin-button,
+[type="number"]::-webkit-outer-spin-button {
   height: auto;
 }
-[type='search'] {
+[type="search"] {
   -webkit-appearance: textfield;
   outline-offset: -2px;
 }
-[type='search']::-webkit-search-decoration {
+[type="search"]::-webkit-search-decoration {
   -webkit-appearance: none;
 }
-[type='text'],
-[type='number'],
-[type='search'],
-[type='password'] {
+[type="text"],
+[type="number"],
+[type="search"],
+[type="password"] {
   height: 52px;
   width: 100%;
   padding: 0 10px;
   font-size: 20px;
 }
-[type='text']:focus,
-[type='number']:focus,
-[type='search']:focus,
-[type='password']:focus {
+[type="text"]:focus,
+[type="number"]:focus,
+[type="search"]:focus,
+[type="password"]:focus {
   border-color: #39b982;
 }
 ::-webkit-file-upload-button {
@@ -293,10 +296,10 @@ select:focus::ms-value {
 select::ms-expand {
   opacity: 0;
 }
-input[type='radio'] {
+input[type="radio"] {
   margin-right: 5px;
 }
-input[type='file'] {
+input[type="file"] {
   border: none;
   height: 52px;
   padding: 15px 0;
