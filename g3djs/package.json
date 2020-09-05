@@ -1,34 +1,33 @@
 {
-  "name": "g3djs",
-  "version": "1.5.0",
-  "description": "Javascript API for reading g3d file",
-  "main": "index.js",
-  "scripts": {
-    "test": "mocha -u tdd --timeout 10000"
-  },
-  "author": "Daofeng Li",
-  "license": "MIT",
-  "dependencies": {
-    "@msgpack/msgpack": "^1.9.1",
-    "browser-or-node": "^1.2.1",
-    "chai": "^4.2.0",
-    "cross-fetch": "^3.0.4",
-    "lodash": "^4.17.15",
-    "mocha": "^6.2.0",
-    "util": "^0.12.1",
-    "zlib": "^1.0.5"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lidaof/g3d.git"
-  },
-  "keywords": [
-    "g3d",
-    "3d-structure",
-    "genome"
-  ],
-  "bugs": {
-    "url": "https://github.com/lidaof/g3d/issues"
-  },
-  "homepage": "https://github.com/lidaof/g3d/g3djs#readme"
+    "name": "g3djs",
+    "version": "2.0.1",
+    "description": "Javascript API for reading g3d file",
+    "main": "index.js",
+    "scripts": {
+        "test": "mocha -u tdd --timeout 10000"
+    },
+    "author": "Daofeng Li",
+    "license": "MIT",
+    "dependencies": {
+        "@msgpack/msgpack": "^1.9.1",
+        "browser-or-node": "^1.2.1",
+        "chai": "^4.2.0",
+        "cross-fetch": "^3.0.4",
+        "mocha": "^6.2.0",
+        "util": "^0.12.1",
+        "zlib": "^1.0.5"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/lidaof/g3d.git"
+    },
+    "keywords": [
+        "g3d",
+        "3d-structure",
+        "genome"
+    ],
+    "bugs": {
+        "url": "https://github.com/lidaof/g3d/issues"
+    },
+    "homepage": "https://github.com/lidaof/g3d/blob/master/g3djs/README.md"
 }

@@ -8,23 +8,23 @@
 
 <script>
 // import Vue from 'vue'
-import { mapState } from 'vuex'
-import * as THREE from 'three'
+import { mapState } from "vuex"
+import * as THREE from "three"
 // import OrbitControls from 'three-orbitcontrols'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import {
   CSS2DRenderer,
   CSS2DObject
-} from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import Stats from 'stats-js'
-import * as dat from 'dat.gui'
-import html2canvas from 'html2canvas'
+} from "three/examples/jsm/renderers/CSS2DRenderer.js"
+import Stats from "stats-js"
+import * as dat from "dat.gui"
+import html2canvas from "html2canvas"
 import {
   getSplines,
   getBallMesh,
   getTubeMesh,
   getLineMesh
-} from '@/components/Tube'
+} from "@/components/Tube"
 // import { clearScene } from '@/helper'
 
 /**
@@ -57,7 +57,7 @@ import {
 // }
 
 export default {
-  name: 'ThreeScene',
+  name: "ThreeScene",
   data() {
     return {
       canvas: null,
@@ -85,10 +85,10 @@ export default {
       // pickHelper: new PickHelper(),
       domEvents: null,
       params: {
-        region: '',
-        shape: 'line',
+        region: "",
+        shape: "line",
         lineWidth: 1,
-        color: '',
+        color: "",
         animationView: false,
         lookAhead: false,
         cameraHelper: false,
@@ -104,7 +104,7 @@ export default {
       }
     }
   },
-  computed: mapState(['g3d', 'data3d']),
+  computed: mapState(["g3d", "data3d"]),
   methods: {
     init() {
       this.container = this.$refs.canvasContainer
@@ -115,7 +115,7 @@ export default {
       this.scene.add(axes)
       this.stats = new Stats()
       this.stats.showPanel(0)
-      this.stats.dom.style.position = 'absolute'
+      this.stats.dom.style.position = "absolute"
       this.$refs.statsContainer.appendChild(this.stats.dom)
       // const light = new THREE.DirectionalLight(0xffffff)
       // light.position.set(0, 0, 1)
@@ -162,6 +162,7 @@ export default {
     },
     createControls() {
       this.controls = new OrbitControls(this.camera, this.container)
+      console.log(this.controls)
     },
     createLights() {
       const ambientLight = new THREE.HemisphereLight(
@@ -191,7 +192,7 @@ export default {
         this.container.clientWidth,
         this.container.clientHeight
       )
-      this.labelRenderer.domElement.style.position = 'absolute'
+      this.labelRenderer.domElement.style.position = "absolute"
       this.labelRenderer.domElement.style.top = 0
       // this.labelRenderer.domElement.id = 'labelDiv' // for by pass mouse events
       this.container.appendChild(this.labelRenderer.domElement)
@@ -210,19 +211,19 @@ export default {
       const chroms = Object.keys(this.splines)
 
       this.gui
-        .addColor(this.params, 'sceneColor')
-        .name('Background')
+        .addColor(this.params, "sceneColor")
+        .name("Background")
         .listen()
         .onChange(e => (this.scene.background = new THREE.Color(e)))
       this.gui
-        .add(this.params, 'displayLabels')
-        .name('Show label')
+        .add(this.params, "displayLabels")
+        .name("Show label")
         .onChange(() => this.toggleLabelDisplay())
       this.gui
-        .add(this.params, 'showAll')
-        .name('Show all')
+        .add(this.params, "showAll")
+        .name("Show all")
         .onChange(() => this.toggleAllMode())
-      const folderGeometry = this.gui.addFolder('Regions')
+      const folderGeometry = this.gui.addFolder("Regions")
       if (this.params.showAll) {
         Object.keys(this.splines).forEach(chrom => {
           const colorKey = `color_${chrom}`
@@ -236,7 +237,7 @@ export default {
               }
             })
         })
-        const displayControl = this.gui.addFolder('Display')
+        const displayControl = this.gui.addFolder("Display")
         Object.keys(this.splines).forEach(chrom => {
           const displayKey = `display_${chrom}`
           displayControl
@@ -250,53 +251,53 @@ export default {
             })
         })
         this.gui
-          .add(this.params, 'shape', {
-            Line: 'line',
-            Tube: 'tube',
-            Ball: 'ball'
+          .add(this.params, "shape", {
+            Line: "line",
+            Tube: "tube",
+            Ball: "ball"
           })
-          .name('Shape')
+          .name("Shape")
           .onChange(() => this.addAllShapes(this.params))
-        const lineControls = this.gui.addFolder('Line Controls')
+        const lineControls = this.gui.addFolder("Line Controls")
         lineControls
-          .add(this.params, 'lineWidth', 1, 10)
+          .add(this.params, "lineWidth", 1, 10)
           .onChange(() => this.addAllShapes(this.params))
       } else {
         this.params.color = this.meshMaterial.color.getStyle()
 
-        folderGeometry.add(this.params, 'region', chroms).onChange(() => {
+        folderGeometry.add(this.params, "region", chroms).onChange(() => {
           this.addShapes(this.params)
         })
         folderGeometry.open()
 
         this.gui
-          .addColor(this.params, 'color')
+          .addColor(this.params, "color")
           .listen()
           .onChange(e => {
             this.meshMaterial.color.setStyle(e)
             this.mesh.children[0].element.style.color = e
           })
         this.gui
-          .add(this.params, 'scale', 1, 10)
+          .add(this.params, "scale", 1, 10)
           .onChange(() => this.setScale())
 
-        const folderCamera = this.gui.addFolder('Camera')
+        const folderCamera = this.gui.addFolder("Camera")
         folderCamera
-          .add(this.params, 'animationView')
-          .name('Walk mode')
+          .add(this.params, "animationView")
+          .name("Walk mode")
           .onChange(() => {
             this.animateCamera()
           })
         folderCamera
-          .add(this.params, 'lookAhead')
-          .name('Look ahead')
+          .add(this.params, "lookAhead")
+          .name("Look ahead")
           .onChange(() => {
             this.animateCamera()
           })
         // folderCamera
         //   .add(this.params, 'cameraHelper')
         //   .onChange(() => this.animateCamera())
-        folderCamera.add(this.params, 'speed', {
+        folderCamera.add(this.params, "speed", {
           Slow: 1,
           Medium: 10,
           Fast: 100
@@ -308,7 +309,7 @@ export default {
         this.params.previousSelected = this.params.selectedMeshChrom
         this.params.selectedMeshChrom = null
       }
-      this.gui.add(this.params, 'unSelectMesh').name('Remove selection')
+      this.gui.add(this.params, "unSelectMesh").name("Remove selection")
       // screenshot function
       this.params.screenshot = async () => {
         this.render()
@@ -325,7 +326,7 @@ export default {
           )
         )
       }
-      this.gui.add(this.params, 'screenshot').name('📷Screenshot')
+      this.gui.add(this.params, "screenshot").name("📷Screenshot")
     },
     async mergeCanvas() {
       const labelCanvas = await html2canvas(this.labelRenderer.domElement, {
@@ -333,8 +334,8 @@ export default {
       })
       this.render()
       const threeCanvas = this.renderer.domElement
-      const newCanvas = document.createElement('canvas')
-      const ctx = newCanvas.getContext('2d')
+      const newCanvas = document.createElement("canvas")
+      const ctx = newCanvas.getContext("2d")
       const width = threeCanvas.width
       const height = threeCanvas.height
 
@@ -364,7 +365,7 @@ export default {
           if (chrom === this.params.selectedMeshChrom) {
             this.meshes[chrom].material.color.set(0xffff00)
             this.meshes[chrom].scale.set(1.1, 1.1, 1.1)
-            this.meshes[chrom].children[0].element.style.color = '#ffff00'
+            this.meshes[chrom].children[0].element.style.color = "#ffff00"
           }
           if (chrom === this.params.previousSelected) {
             const colorKey = `color_${chrom}`
@@ -378,7 +379,7 @@ export default {
         if (this.params.selectedMeshChrom) {
           this.mesh.material.color.set(0xffff00)
           this.mesh.scale.set(1.1, 1.1, 1.1)
-          this.mesh.children[0].element.style.color = '#ffff00'
+          this.mesh.children[0].element.style.color = "#ffff00"
         } else {
           if (this.params.previousSelected) {
             const color = this.splines[this.params.region].color
@@ -451,6 +452,11 @@ export default {
       )
       this.labelRenderer.render(this.scene, this.camera)
 
+      // const zoom = this.controls.target.distanceTo(
+      //   this.controls.object.position
+      // )
+      // console.log(zoom)
+
       this.stats.end()
     },
     onWindowResize() {
@@ -481,7 +487,7 @@ export default {
     toggleLabelDisplay() {
       // const labelDiv = document.querySelector('#labelDiv')
       const labelDiv = this.labelRenderer.domElement
-      labelDiv.style.display = this.params.displayLabels ? 'block' : 'none'
+      labelDiv.style.display = this.params.displayLabels ? "block" : "none"
     },
     toggleAllMode() {
       this.clearLabelDiv()
@@ -506,13 +512,13 @@ export default {
         const { spline } = this.splines[chrom]
         let mesh
         switch (params.shape) {
-          case 'line':
+          case "line":
             mesh = getLineMesh(spline, params, chrom)
             break
-          case 'tube':
+          case "tube":
             mesh = getTubeMesh(spline, params, chrom)
             break
-          case 'ball':
+          case "ball":
             mesh = getBallMesh(spline, params, chrom)
             break
           default:
@@ -522,10 +528,10 @@ export default {
         const displayKey = `display_${chrom}`
         mesh.visible = this.params[displayKey]
         // add label
-        const labelDiv = document.createElement('div')
-        labelDiv.className = 'label'
+        const labelDiv = document.createElement("div")
+        labelDiv.className = "label"
         labelDiv.textContent = chrom
-        labelDiv.style.marginTop = '-1em'
+        labelDiv.style.marginTop = "-1em"
         const colorKey = `color_${chrom}`
         const color = params[colorKey]
         labelDiv.style.color = color
@@ -534,7 +540,7 @@ export default {
         mesh.add(label)
         this.meshes[chrom] = mesh
         labelDiv.addEventListener(
-          'click',
+          "click",
           () => {
             this.params.previousSelected = this.params.selectedMeshChrom
             this.params.selectedMeshChrom = chrom
@@ -562,17 +568,17 @@ export default {
       })
       this.mesh = new THREE.Mesh(this.meshGeometry, this.meshMaterial)
       // add label
-      const labelDiv = document.createElement('div')
-      labelDiv.className = 'label'
+      const labelDiv = document.createElement("div")
+      labelDiv.className = "label"
       labelDiv.textContent = region
-      labelDiv.style.marginTop = '-1em'
+      labelDiv.style.marginTop = "-1em"
       labelDiv.style.color = this.splines[params.region].color
       const label = new CSS2DObject(labelDiv)
       label.position.copy(extrudePath.getPoint(0))
       this.mesh.add(label)
       this.parent.add(this.mesh)
       labelDiv.addEventListener(
-        'click',
+        "click",
         () => {
           this.params.previousSelected = this.params.selectedMeshChrom
           this.params.selectedMeshChrom = params.region
@@ -606,9 +612,9 @@ export default {
       }
     },
     saveBlob(blob, fileName) {
-      const a = document.createElement('a')
+      const a = document.createElement("a")
       document.body.appendChild(a)
-      a.style.display = 'none'
+      a.style.display = "none"
       return (function saveData(blob, fileName) {
         // console.log(blob)
         const url = window.URL.createObjectURL(blob)
@@ -641,7 +647,7 @@ export default {
   },
   mounted() {
     this.init()
-    window.addEventListener('resize', this.onWindowResize)
+    window.addEventListener("resize", this.onWindowResize)
     // window.addEventListener('mousemove', this.setPickPosition)
     // window.addEventListener('mouseout', this.clearPickPosition)
     // window.addEventListener('mouseleave', this.clearPickPosition)
@@ -697,7 +703,7 @@ export default {
     // }
   },
   beforeDestroy() {
-    window.removeEventListener('resize', this.onWindowResize)
+    window.removeEventListener("resize", this.onWindowResize)
     // window.removeEventListener('mousemove', this.setPickPosition)
     // window.removeEventListener('mouseout', this.clearPickPosition)
     // window.removeEventListener('mouseleave', this.clearPickPosition)

@@ -1,6 +1,6 @@
-import Vue from 'vue'
-import Vuex from 'vuex'
-import { parseRegionString } from './helper'
+import Vue from "vue"
+import Vuex from "vuex"
+import { parseRegionString } from "./helper"
 
 Vue.use(Vuex)
 
@@ -27,50 +27,50 @@ export default new Vuex.Store({
   },
   mutations: {
     SET_G3D(state, g) {
-      Vue.set(state, 'g3d', { ...g })
+      Vue.set(state, "g3d", { ...g })
     },
     SET_LOADING_STATUS(state) {
       state.isLoading = !state.isLoading
     },
     SET_DATA3D(state, data) {
-      Vue.set(state, 'data3d', [...data])
+      Vue.set(state, "data3d", [...data])
     },
     SET_G3D_FILE(state, gf) {
-      Vue.set(state, 'g3dFile', gf)
+      Vue.set(state, "g3dFile", gf)
     },
     SET_STATE_ERROR_MSG(state, msg) {
-      Vue.set(state, 'stateErrorMsg', msg)
+      Vue.set(state, "stateErrorMsg", msg)
     }
   },
   actions: {
     setG3d({ commit }, g) {
-      commit('SET_G3D', g)
+      commit("SET_G3D", g)
     },
     setG3dFile({ commit }, gf) {
-      commit('SET_G3D_FILE', gf)
+      commit("SET_G3D_FILE", gf)
     },
     async fetchData({ commit, state }) {
       const { region, resolution, regionControl } = state.g3d
       const parsedRegion = parseRegionString(region)
       console.log(parsedRegion)
       if (parsedRegion.error) {
-        commit('SET_STATE_ERROR_MSG', parsedRegion.error)
+        commit("SET_STATE_ERROR_MSG", parsedRegion.error)
         return
       }
-      commit('SET_STATE_ERROR_MSG', null)
-      commit('SET_LOADING_STATUS')
+      commit("SET_STATE_ERROR_MSG", null)
+      commit("SET_LOADING_STATUS")
       let data
       switch (regionControl) {
-        case 'genome':
+        case "genome":
           data = await state.g3dFile.readDataGenome(resolution)
           break
-        case 'chrom':
+        case "chrom":
           data = await state.g3dFile.readDataChromosome(
             parsedRegion.chr,
             resolution
           )
           break
-        case 'region':
+        case "region":
         default:
           data = await state.g3dFile.readData(
             parsedRegion.chr,
@@ -85,8 +85,9 @@ export default new Vuex.Store({
       // )
       // const pat = sorted.filter(item => item[6] === 'p')
       // const ensured = ensureMaxListLength(pat, 2000)
-      commit('SET_DATA3D', data)
-      commit('SET_LOADING_STATUS')
+      console.log(data)
+      commit("SET_DATA3D", data)
+      commit("SET_LOADING_STATUS")
     }
   }
 })

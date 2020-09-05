@@ -41,7 +41,7 @@ columns are:
 ## Generate a new .g3d file using the format listed above
 
 ```console
-g3dtools load ../test/test.g3d.bed.gz -o ../testOut/test -s 2,3,4,5,6,7,8,9,10
+g3dtools load ../test/test.g3d.bed.gz -o ../testOut/test -s 2,3,4,5,6,7,8,9,10 -n GM12878 -g hg19
 ```
 
 ## Generate a new .g3d file from .3dg format
@@ -60,6 +60,14 @@ User can also generate .g3d file from [pastis](http://projets.cbio.mines-pariste
 
 ```console
 g3dtools pastis -C chrX ../test/combined-WG-brain.1000000.alt.structure.3d.txt -o ../testOut/combined-WG-brain.1000000.alt.structure.3d
+```
+
+## Generate a new .g3d from nucle3d format
+
+User can also generate .g3d file from [nucle3d](https://github.com/nucleome/nucle3d) format.
+
+```console
+g3dtools nucle3d -n k562 -g hg38 -o ../testOut/k562 ../test/K562.nucle3d
 ```
 
 ## Query
