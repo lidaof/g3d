@@ -17,6 +17,7 @@ import glob
 import argparse
 import msgpack
 from utils import Utils
+from utils import version
 
 MAGIC = 'G3D'
 VERSION = 2  # swtich to column based
@@ -28,7 +29,7 @@ def read_header(fh):
     '''return the header of a g3d file'''
     header_pkl = fh.read(HEADER_LENGTH)
     # return msgpack.unpackb(header_pkl.rstrip(b'\x00'), raw=False)
-    up = msgpack.Unpacker(raw=False)
+    up = msgpack.Unpacker(raw=False, strict_map_key=False)
     up.feed(header_pkl)
     return up.unpack()
 
@@ -68,28 +69,41 @@ def get_meta(g3d_filename):
 
 def parse_pastis_wrap(args):
     parse_pastis(args.filename, args.output, args.genome,
-                 args.name, args.resolution, args.scales, args.chrom, args.header)
+                 args.name, args.resolution, args.scales, args.header)
 
 
-def parse_pastis(file_name, out_file_name, genome, name, resolution, scales, chrom, header):
+def parse_pastis(file_name, out_file_name, genome, name, resolution, scales, header):
     """
     Parse the pastis output to .g3d format.
     """
-    gk = Utils.parse_pastis_2_g3dKeeper(file_name, resolution, chrom, header)
-    write_g3d(gk, out_file_name, genome, name, scales)
+    gk = Utils.parse_pastis_2_g3dKeeper_v2(file_name, resolution, header)
+    write_g3d_v2(gk, out_file_name, genome, name, scales)
+
+
+def parse_pastis_pdb_wrap(args):
+    parse_pastis_pdb(args.filename, args.output, args.genome,
+                     args.name, args.resolution, args.scales)
+
+
+def parse_pastis_pdb(file_name, out_file_name, genome, name, resolution, scales):
+    """
+    Parse the pastis output to .g3d format.
+    """
+    gk = Utils.parse_pastis_pdb_2_g3dKeeper_v2(file_name, resolution)
+    write_g3d_v2(gk, out_file_name, genome, name, scales)
 
 
 def parse_3dg_wrap(args):
-    parse_3dg(args.filename, args.output, args.genome,
-              args.name, args.resolution, args.scales)
+    parse_3dg_v2(args.filename, args.output, args.genome,
+                 args.name, args.resolution, args.scales)
 
 
-def parse_3dg(file_name, out_file_name, genome, name, resolution, scales):
+def parse_3dg_v2(file_name, out_file_name, genome, name, resolution, scales):
     """
     Parse the .3dg format to .g3d format.
     """
-    gk = Utils.parse_3dg_2_g3dKeeper(file_name, resolution=resolution)
-    write_g3d(gk, out_file_name, genome, name, scales)
+    gk = Utils.parse_3dg_2_g3dKeeper_v2(file_name, resolution=resolution)
+    write_g3d_v2(gk, out_file_name, genome, name, scales)
 
 
 def parse_nucle3d_wrap(args):
@@ -128,6 +142,7 @@ def write_g3d_v2(gk, out_file_name, genome, name, scales):
         scales2 = [int(x) for x in scales.split(',')]
         for s in scales2:
             content[gk.resolution * s] = Utils.scale_keeper_v2(gk, s)
+    cats = gk.haplotypes
     # write g3d file
     outf = '{}.g3d'.format(out_file_name)
     print('Writing file {}'.format(outf), file=sys.stderr)
@@ -164,6 +179,7 @@ def write_g3d_v2(gk, out_file_name, genome, name, scales):
             'name': name,
             'offsets': offsets,
             'resolutions': list(content.keys()),
+            'categories': cats,
         }
         # meta_pkl = zlib.compress(msgpack.packb(meta, use_bin_type=True))
         meta_pkl = msgpack.packb(meta, use_bin_type=True)
@@ -176,10 +192,10 @@ def write_g3d_v2(gk, out_file_name, genome, name, scales):
 
 def query_g3d_file_wrap(args):
     query_g3d_file(args.filename, args.chrom, args.start, args.end,
-                   args.resolution, args.output, args.wholeChrom, args.wholeGenome)
+                   args.resolution, args.category, args.output, args.wholeChrom, args.wholeGenome)
 
 
-def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=False, wholeGenome=False):
+def query_g3d_file(filename, chrom, start, end, resolution, category, output, wholeChrom=False, wholeGenome=False):
     """
     query structures from a g3d file
     """
@@ -208,72 +224,56 @@ def query_g3d_file(filename, chrom, start, end, resolution, output, wholeChrom=F
                 resolution, header['resolutions']), file=sys.stderr)
             fout.close()
             sys.exit(2)
+        file_offset = offsets[resolution]['offset']
+        file_size = offsets[resolution]['size']
+        fin.seek(file_offset)
+        file_pkl = fin.read(file_size)
+        out = msgpack.unpackb(zlib.decompress(file_pkl), raw=False)
+        if category:
+            if category not in out:
+                print('Error, {} category not exists in this g3d file'.format(category))
+                fout.close()
+                sys.exit(3)
         if wholeGenome:
-            # for chrom in index[resolution]:
-            #     for binkey in index[resolution][chrom]:
-            #         write_contents_file_handle(
-            #             fin, fout, index[resolution][chrom][binkey])
-            # using the full size index instead, faster?
-
-            for chrom in offsets[resolution]:
-                write_contents_file_handle_full(
-                    fin, fout, offsets[resolution][chrom])
+            write_contents(out, fout, category)
         elif wholeChrom:
-            # if chrom not in index[resolution]:
-            #     fout.close()
-            #     return
-            # for binkey in index[resolution][chrom]:
-            #     write_contents_file_handle(
-            #         fin, fout, index[resolution][chrom][binkey])
-            if chrom not in offsets[resolution]:
-                fout.close()
-                return
-            write_contents_file_handle_full(
-                fin, fout, offsets[resolution][chrom])
+            write_contents(out, fout, category, chrom)
         else:
-            if chrom not in offsets[resolution]:
-                fout.close()
-                return
-            binkeys = Utils.reg2bins(start, end)
-            write_contents_file_handle_full(
-                fin, fout, offsets[resolution][chrom], binkeys)
+            write_contents(out, fout, category, chrom, start, end, resolution)
     if output:
         fout.close()
 
 
-def write_contents_file_handle(fh_in, fh_out, data):
-    file_offset = data['offset']
-    file_size = data['size']
-    fh_in.seek(file_offset)
-    file_pkl = fh_in.read(file_size)
-    # contents = pickle.loads(zlib.decompress(file_pkl))
-    contents = msgpack.unpackb(zlib.decompress(file_pkl), raw=False)
-    for con in contents:
-        fh_out.write('{}\n'.format('\t'.join(map(str, con))))
-        # print(*con, sep='\t', file=fh_out)
-
-
-def write_contents_file_handle_full(fh_in, fh_out, data, binkeys=[]):
-    # to be FIXED: compressed msg packed data, how to decompress and unpack
-    need_check = False
-    file_offset = data['offset']
-    file_size = data['size']
-    fh_in.seek(file_offset)
-    file_pkl = fh_in.read(file_size)
-    out = msgpack.unpackb(zlib.decompress(file_pkl), raw=False)
-    if len(binkeys) > 0:
-        need_check = True
-    for binkey in out:
-        if need_check:
-            if binkey not in binkeys:
-                continue
-        for con in out[binkey]:
-            fh_out.write('{}\n'.format('\t'.join(map(str, con))))
+def write_contents(out, fh_out, category, chrom='', start=0, end=0, resolution=0):
+    cats = list(out.keys())
+    if category:
+        cats = [category]
+    chroms = out[cats[0]].keys()
+    if chrom:
+        chroms = [chrom]
+    # print(chroms, file=sys.stderr)
+    for cat in cats:
+        for chromo in chroms:
+            data = out[cat][chromo]
+            starts = data['start']
+            if start and end:
+                for m, n in enumerate(starts):
+                    if n + resolution >= start and n <= end:
+                        fh_out.write(
+                            '{}\t{}\t{}\t{}\t{}\t{}\n'.format(chromo, n, data['x'][m], data['y'][m], data['z'][m], cat))
+            else:
+                for m, n in enumerate(starts):
+                    fh_out.write(
+                        '{}\t{}\t{}\t{}\t{}\t{}\n'.format(chromo, n, data['x'][m], data['y'][m], data['z'][m], cat))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='g3dtools', description='g3dtools for operating text structure files with g3d format.')
+
+    parser.add_argument('--version', '-v', action='version',
+                        version='%(prog)s ' + version.__version__)
+
     subparsers = parser.add_subparsers(title='subcommands',
                                        description='valid subcommands',
                                        help='additional help')
@@ -330,18 +330,35 @@ if __name__ == '__main__':
     parser_pastis.add_argument(
         '-n', '--name', help='name information. default: unknow_name', default='unknow_name')
     parser_pastis.add_argument('-r', '--resolution', type=int,
-                               help='pastis output file resolution, like 10000. default: 10000', default=10000)
+                               help='pastis output file resolution, like 10000. default: 10000', default=500)
     parser_pastis.add_argument(
         '-s', '--scales', help='scale to lower resolution, comma separated numbers, like 2,3,4')
+    # parser_pastis.add_argument(
+    #     '-C', '--chrom', help='specify the chromosome name, like chr1, chr2 etc.')
     parser_pastis.add_argument(
-        '-C', '--chrom', help='specify the chromosome name, like chr1, chr2 etc.')
-    parser_pastis.add_argument(
-        '-H', '--header', help='specify if file has header row, default false', action='store_true')
+        '-H', '--header', help='specify if file has header row, default True', action='store_true', default=True)
     parser_pastis.add_argument(
         '-o', '--output', help='output file name, a suffix .g3d will be added. default: output', default='output')
     parser_pastis.set_defaults(func=parse_pastis_wrap)
 
-    # paser nucle3d https://github.com/nucleome/nucle3d
+    # paser pastis pdb format. pdb files are from https://noble.gs.washington.edu/proj/plasmo3d/
+    parser_pastis_pdb = subparsers.add_parser(
+        'pastis-pdb', help='dump pastis pdb (https://noble.gs.washington.edu/proj/plasmo3d/) output to a g3d file')
+    parser_pastis_pdb.add_argument(
+        'filename', help='pastis pdb output file, can be gzip compressed.')
+    parser_pastis_pdb.add_argument(
+        '-g', '--genome', help='genome assembly, like hg19, m10 etc. default: unknow_genome', default='unknow_genome')
+    parser_pastis_pdb.add_argument(
+        '-n', '--name', help='name information. default: unknow_name', default='unknow_name')
+    parser_pastis_pdb.add_argument('-r', '--resolution', type=int,
+                                   help='pastis output file resolution, like 500. default: 500', default=500)
+    parser_pastis_pdb.add_argument(
+        '-s', '--scales', help='scale to lower resolution, comma separated numbers, like 2,3,4')
+    parser_pastis_pdb.add_argument(
+        '-o', '--output', help='output file name, a suffix .g3d will be added. default: output', default='output')
+    parser_pastis_pdb.set_defaults(func=parse_pastis_pdb_wrap)
+
+    # parser nucle3d https://github.com/nucleome/nucle3d
     parser_nucle3d = subparsers.add_parser(
         'nucle3d', help='dump nucle3d (https://github.com/nucleome/nucle3d) format to a g3d file')
     parser_nucle3d.add_argument(
@@ -366,12 +383,14 @@ if __name__ == '__main__':
     parser_query = subparsers.add_parser(
         'query', help='query structures from a g3d file')
     parser_query.add_argument(
-        'filename', help='file in .3dg file, can be gzip compressed.')
-    parser_query.add_argument('-c', '--chrom', help='chromosome.')
+        'filename', help='the .g3d file')
+    parser_query.add_argument('-c', '--chrom', help='chromosome')
     parser_query.add_argument('-s', '--start', type=int, help='start position')
     parser_query.add_argument('-e', '--end', type=int, help='end position')
     parser_query.add_argument('-r', '--resolution', type=int,
                               help='specify one resolution, default 200000', default=200000)
+    parser_query.add_argument('-y', '--category',
+                              help='data category, like paternal, or maternal, or sample1, cell-1 etc.')
     parser_query.add_argument(
         '-o', '--output', help='output file name, default outputs to screen')
     parser_query.add_argument(

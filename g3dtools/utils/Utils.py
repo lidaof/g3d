@@ -16,6 +16,9 @@ def centerOf(start, end):
 
 
 def xread(fn):
+    if not os.path.exists(fn):
+        print('Error: {} not exist, please check'.format(fn), file=sys.stderr)
+        sys.exit(2)
     if fn.endswith('.gz'):
         return gzip.open(fn, 'rt')
     else:
@@ -125,7 +128,7 @@ class g3dKeeperV2(object):
 
     def __init__(self, d, resolution):
         self.d = d
-        self.haplotypes = d.keys()
+        self.haplotypes = list(d.keys())
         self.resolution = resolution
 
     def __len__(self):
@@ -143,7 +146,7 @@ class g3dKeeperV2(object):
                         fout.write('{}\t{}\n'.format(j, i))
 
 
-def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim='\t', chrom='', header=False):
+def parse_3dg_file_to_g3dDict_v2(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim='\t', chrom='', header=False):
     print('Reading file {}'.format(f), file=sys.stderr)
     if not os.path.exists(f):
         print('Error: {} not exist, please check'.format(f), file=sys.stderr)
@@ -160,56 +163,49 @@ def parse_3dg_file_to_g3dDict(f, keyIndex=0, startIndex=1, resolution=20000, xke
             # print(lin)
             # sys.exit()
             t = lin.split(delim)
-            name, hap = t[keyIndex].split('(')
-            if not name.startswith('chr'):
-                namekey = 'chr{}'.format(name)
+            namekey, hap = t[keyIndex].split('(')
+            if not namekey.startswith('chr'):
+                namekey = 'chr{}'.format(namekey)
             hap = hap.rstrip(')')
             if hap == 'pat':
-                hap = 'p'
+                hap = PATERNAL
             if hap == 'mat':
-                hap = 'm'
+                hap = MATERNAL
             if chrom:
                 if namekey != chrom:
                     continue
             # if namekey!= 'chr7': continue
             start = int(t[startIndex])
-            end = start + resolution
-            binkey = reg2bin(start, end)
-            if namekey not in d:
-                d[namekey] = {}
-            if binkey not in d[namekey]:
-                d[namekey][binkey] = [g3dElement(
-                    namekey, start, end, t[xkey], t[ykey], t[zkey], hap)]
+            if hap not in d:
+                d[hap] = {}
+            if namekey not in d[hap]:
+                d[hap][namekey] = [
+                    g3dItem(namekey, start, t[xkey], t[ykey], t[zkey])]
             else:
-                d[namekey][binkey].append(g3dElement(
-                    namekey, start, end, t[xkey], t[ykey], t[zkey], hap))
+                d[hap][namekey].append(
+                    g3dItem(namekey, start, t[xkey], t[ykey], t[zkey]))
             c += 1
     print('Done read {} records'.format(c), file=sys.stderr)
-    return d
+    return sorted_binDict(d)
 
 
-def parse_3dg_2_g3dKeeper(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim='\t', chrom='', header=False):
-    d = parse_3dg_file_to_g3dDict(
+def parse_3dg_2_g3dKeeper_v2(f, keyIndex=0, startIndex=1, resolution=20000, xkey=2, ykey=3, zkey=4, delim='\t', chrom='', header=False):
+    d = parse_3dg_file_to_g3dDict_v2(
         f, keyIndex, startIndex, resolution, xkey, ykey, zkey, delim, chrom, header)
-    dk = g3dKeeper(d, resolution)
-    dk.sort_by_start_each_bin()
+    dk = g3dKeeperV2(d, resolution)
     return dk
 
 
-def parse_pastis_2_g3dKeeper(f, resolution, chrom, header):
-    d = parse_pastis_file_to_g3dDict(f, resolution, chrom, header)
-    dk = g3dKeeper(d, resolution)
-    dk.sort_by_start_each_bin()
+def parse_pastis_2_g3dKeeper_v2(f, resolution, header):
+    d = parse_pastis_file_to_g3dDict_v2(f, resolution, header)
+    dk = g3dKeeperV2(d, resolution)
     return dk
 
 
-def parse_pastis_file_to_g3dDict(f, resolution=10000, chrom='', header=False):
+def parse_pastis_file_to_g3dDict_v2(f, resolution=500, header=True):
     print('Reading file {}'.format(f), file=sys.stderr)
     if not os.path.exists(f):
         print('Error: {} not exist, please check'.format(f), file=sys.stderr)
-        sys.exit(2)
-    if not chrom:
-        print('Error: chromosome not specified, please check', file=sys.stderr)
         sys.exit(2)
     d = {}
     c = 0
@@ -221,40 +217,90 @@ def parse_pastis_file_to_g3dDict(f, resolution=10000, chrom='', header=False):
             if not lin:
                 continue
             t = lin.split('\t')
-            namekey = chrom
-            hap = 's'
-            start = int(t[0])
-            end = start + resolution
-            binkey = reg2bin(start, end)
-            if namekey not in d:
-                d[namekey] = {}
-            if binkey not in d[namekey]:
-                d[namekey][binkey] = [g3dElement(
-                    namekey, start, end, t[1], t[2], t[3], hap)]
+            namekey = t[0]
+            if not namekey.startswith('chr'):
+                namekey = 'chr{}'.format(namekey)
+            hap = SHARED
+            start = int(t[1])
+            if hap not in d:
+                d[hap] = {}
+            if namekey not in d[hap]:
+                d[hap][namekey] = [
+                    g3dItem(namekey, start, t[2], t[3], t[4])]
             else:
-                d[namekey][binkey].append(g3dElement(
-                    namekey, start, end, t[1], t[2], t[3], hap))
+                d[hap][namekey].append(
+                    g3dItem(namekey, start, t[2], t[3], t[4]))
             c += 1
     print('Done read {} records'.format(c), file=sys.stderr)
-    return d
+    return sorted_binDict(d)
 
 
-def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=4, zkey=5, hapIndex=6, resolution=20000, delim='\t', chrom='', header=False):
+def parse_pastis_pdb_2_g3dKeeper_v2(f, resolution):
+    d = parse_pastis_pdb_file_to_g3dDict_v2(f, resolution)
+    dk = g3dKeeperV2(d, resolution)
+    return dk
+
+
+def parse_pastis_pdb_file_to_g3dDict_v2(f, resolution=500):
+    print('Reading file {}'.format(f), file=sys.stderr)
+    if not os.path.exists(f):
+        print('Error: {} not exist, please check'.format(f), file=sys.stderr)
+        sys.exit(2)
+    chrom_map = {
+        'A': 'chr1',
+        'B': 'chr2',
+        'C': 'chr3',
+        'D': 'chr4',
+        'E': 'chr5',
+        'F': 'chr6',
+        'G': 'chr7',
+        'H': 'chr8',
+        'I': 'chr9',
+        'J': 'chr10',
+        'K': 'chr11',
+        'L': 'chr12',
+        'M': 'chr13',
+        'N': 'chr14',
+    }
+    d = {}
+    c = 0
+    with xread(f) as fin:
+        for line in fin:
+            lin = line.strip()
+            if not lin:
+                continue
+            t = lin.split()
+            namekey = chrom_map[t[4]]
+            hap = SHARED
+            start = int(t[1]) * resolution
+            if hap not in d:
+                d[hap] = {}
+            if namekey not in d[hap]:
+                d[hap][namekey] = [
+                    g3dItem(namekey, start, t[5], t[6], t[7])]
+            else:
+                d[hap][namekey].append(
+                    g3dItem(namekey, start, t[5], t[6], t[7]))
+            c += 1
+    print('Done read {} records'.format(c), file=sys.stderr)
+    return sorted_binDict(d)
+
+
+def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, xkey=2, ykey=3, zkey=4, hapIndex=5, resolution=20000, delim='\t', chrom='', header=False):
     '''
     Reading g3d bed file to a dict.
         key: haplotype, can be SHARED if not specified, or MATERNAL, PATERNAL 
         value: dict of data, key: chrom, value: [list of g3dItem]
     '''
     print('Reading file {}'.format(f), file=sys.stderr)
-    if not os.path.exists(f):
-        print('Error: {} not exist, please check'.format(f), file=sys.stderr)
-        sys.exit(2)
     d = {}
     c = 0
     with xread(f) as fin:
         if header:
             next(fin)
         for line in fin:
+            if line.startswith('#'):
+                continue
             lin = line.strip()
             if not lin:
                 continue
@@ -266,10 +312,10 @@ def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=
                 namekey = 'chrM'
             if not namekey.startswith('chr'):
                 namekey = 'chr{}'.format(namekey)
-            if len(t) < 7:
+            if len(t) < 6:
                 hap = SHARED
             else:
-                hap = t[6].lower()
+                hap = t[hapIndex]
             if hap == 'pat' or hap == 'p':
                 hap = PATERNAL
             if hap == 'mat' or hap == 'm':
@@ -288,6 +334,10 @@ def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=
                     g3dItem(namekey, start, t[xkey], t[ykey], t[zkey]))
             c += 1
     print('Done read {} records'.format(c), file=sys.stderr)
+    return sorted_binDict(d)
+
+
+def sorted_binDict(d):
     print('Sorting', file=sys.stderr)
     sd = {}
     for k in d:
@@ -298,9 +348,9 @@ def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=
     return sd
 
 
-def parse_g3d_bed_g3dKeeper_v2(f, keyIndex=0, startIndex=1, endIndex=2, xkey=3, ykey=4, zkey=5, hapIndex=6, resolution=20000, delim='\t', chrom='', header=False):
+def parse_g3d_bed_g3dKeeper_v2(f, keyIndex=0, startIndex=1, xkey=2, ykey=3, zkey=4, hapIndex=5, resolution=20000, delim='\t', chrom='', header=False):
     d = parse_g3d_bed_file_v2(
-        f, keyIndex, startIndex, endIndex, xkey, ykey, zkey, hapIndex, resolution, delim, chrom, header)
+        f, keyIndex, startIndex, xkey, ykey, zkey, hapIndex, resolution, delim, chrom, header)
     dk = g3dKeeperV2(d, resolution)
     return dk
 
