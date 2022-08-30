@@ -5,6 +5,7 @@
 import sys
 import gzip
 import os
+from .roman import intToRoman
 
 MATERNAL = 'maternal'
 PATERNAL = 'paternal'
@@ -219,7 +220,9 @@ def parse_pastis_file_to_g3dDict_v2(f, resolution=500, header=True):
             t = lin.split('\t')
             namekey = t[0]
             if not namekey.startswith('chr'):
-                namekey = 'chr{}'.format(namekey)
+                # yeast genome using roman letters for chr names
+                namekey = 'chr{}'.format(intToRoman(int(namekey)))
+                # namekey = 'chr{}'.format(namekey)
             hap = SHARED
             start = int(t[1])
             if hap not in d:
