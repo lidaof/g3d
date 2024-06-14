@@ -4,5 +4,9 @@
     "python.jediEnabled": false,
     "liveServer.settings.port": 5501,
     "restructuredtext.confPath": "${workspaceFolder}/docs",
-    "python.languageServer": "Microsoft"
+    "python.languageServer": "Default",
+    "esbonio.sphinx.confDir": "${workspaceFolder}/docs",
+    "python.analysis.extraPaths": [
+        "./g3dtools"
+    ]
 }

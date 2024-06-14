@@ -296,7 +296,7 @@ if __name__ == '__main__':
     parser_load.add_argument(
         '-n', '--name', help='name information. default: unknow_name', default='unknow_name')
     parser_load.add_argument('-r', '--resolution', type=int,
-                             help='g3d bed file resolution, like 20000. default: 20000', default=20000)
+                             help='g3d bed file resolution/length of each segment, like 20000. default: 20000', default=20000)
     parser_load.add_argument(
         '-s', '--scales', help='scale to lower resolution, comma separated numbers, like 2,3,4')
     parser_load.add_argument(

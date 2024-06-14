@@ -129,3 +129,9 @@ g3dtools meta testOut/test2.g3d
     ]
 }
 ```
+
+## Troubeshooting
+
+### RecursionError: maximum recursion depth exceeded in comparison
+
+This error happens is the resolution of the input file is not the default 20000, you would need specify the `-r` parameter. Somehow resolution checking is not working as the bins are not always continuous.

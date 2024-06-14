@@ -23,7 +23,7 @@ def xread(fn):
     if fn.endswith('.gz'):
         return gzip.open(fn, 'rt')
     else:
-        return open(fn, 'rU')
+        return open(fn, 'r')
 
 
 def xwrite(fn):
@@ -35,7 +35,7 @@ def xwrite(fn):
 
 def fileLines(f):
     c = 0
-    with open(f, 'rU') as fin:
+    with open(f, 'r') as fin:
         for line in fin:
             c += 1
     return c
@@ -298,6 +298,8 @@ def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, xkey=2, ykey=3, zkey=4, h
     print('Reading file {}'.format(f), file=sys.stderr)
     d = {}
     c = 0
+    # r = 0 # resolution in file
+    # ps = -1 # previous start
     with xread(f) as fin:
         if header:
             next(fin)
@@ -327,6 +329,14 @@ def parse_g3d_bed_file_v2(f, keyIndex=0, startIndex=1, xkey=2, ykey=3, zkey=4, h
                 if namekey != chrom:
                     continue
             start = int(t[startIndex])
+            # resolution checking is not working as the bins are not always continuous
+            # if ps >= 0:
+            #     r = start - ps
+            #     if r != resolution:
+            #         print('Resolution in file is {}, but specified as {}'.format(r, resolution), file=sys.stderr)
+            #         print('You may need use `-r {}`, please check the resolution in the file'.format(r), file=sys.stderr)
+            #         sys.exit(1)
+            # ps = start
             if hap not in d:
                 d[hap] = {}
             if namekey not in d[hap]:
